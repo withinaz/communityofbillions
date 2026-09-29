@@ -125,6 +125,52 @@ Which is why §8.4 of the spec is a table of mandatory comparisons, and why rece
 (`matchReceipt`) is a first-class exported function rather than something each integrator is
 expected to reinvent. The failure mode of reinventing it is settling an invoice twice.
 
+## Settlement handshake
+
+The sequence below is the message exchange in
+[`examples/two-agents/run.js`](../examples/two-agents/run.js): Bob (compute) announces itself,
+Alice (research) asks for work, Bob invoices, Alice pays and returns a receipt, and Bob settles
+only after `matchReceipt` succeeds. On-chain payment is simulated in the example (Phase 2 will
+verify receipts against chain state); the envelopes and local payment states are real.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Alice as Alice (payer)
+  participant Bob as Bob (payee)
+
+  Note over Alice,Bob: Happy path (run.js §1–4)
+  Bob->>Alice: cob.presence<br/>endpoints + capabilities
+  Alice->>Bob: cob.message<br/>task offer (e.g. translate)
+  Bob->>Alice: cob.payment.request<br/>invoiceId, chain, asset, amount, payTo, validUntil
+  Note over Alice: Payment: requested → authorized → submitted
+  Alice->>Bob: cob.payment.receipt<br/>invoiceId, txHash, amount, payee
+  Note over Bob: matchReceipt then applyReceipt → settled
+
+  Note over Alice,Bob: Expiry path (no settlement message)
+  Bob--xAlice: cob.payment.request (same as above)
+  Note over Alice: validUntil / envelope expires<br/>with no matching receipt
+  Note over Alice,Bob: Payment → expired (terminal)
+
+  Note over Alice,Bob: Mismatch or replay (still no refund message)
+  Alice--xBob: cob.payment.receipt (wrong amount or second copy)
+  Note over Bob: matchReceipt fails, or<br/>UNEXPECTED_RECEIPT if already settled<br/>Payment stays failed / settled once
+```
+
+What each on-wire arrow commits both parties to:
+
+| Arrow | Type | Commitment |
+| --- | --- | --- |
+| Presence | `cob.presence` | Bob asserts identity, endpoints, and capabilities under signature. Alice may contact those endpoints; she is not yet obliged to pay. |
+| Offer | `cob.message` | Alice states a task. Application-defined only — no money moves and no invoice is implied until a payment request arrives. |
+| Invoice | `cob.payment.request` | Bob names exact chain, asset, amount, and `payTo`. Alice must apply her own policy before paying. The request carries `validUntil` (default 900s); after that the local payment should move to `expired`, not settle late. |
+| Receipt | `cob.payment.receipt` | Alice claims a specific transfer settled that invoice. Bob **must** run `matchReceipt` (invoice, chain, asset, amount by value, payee) before transitioning to `settled`. A mismatch or a second receipt after settlement is refused (`UNEXPECTED_RECEIPT`); the refusal does not change state. |
+
+There is **no** `cob.payment.refund` (or similar) message in COB/1 today. Unsettled work ends in the
+terminal states `expired` or `failed`; reverse payment and escrow are listed as deliberate gaps in
+the table below and in the roadmap. Envelope-level `expires` also bounds every message: a verifier
+rejects an envelope after its window (`COB_EXPIRED`), independent of the payment state machine.
+
 ## The double-settlement problem
 
 Consider: an agent receives a receipt, settles the invoice, and the same receipt arrives again on
