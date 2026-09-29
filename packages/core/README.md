@@ -117,7 +117,7 @@ The gate is a `throw`, not an instruction to a model. That is the point.
 ## CLI
 
 ```
-cob keygen --out <path>              generate an identity
+cob keygen --out <path> [--force]    generate an identity (refuses to overwrite unless --force)
 cob id --key <path>                  print the agent id
 cob sign --key <path> --to <id> --type <t> --body <json>
 cob verify --envelope <path|->       exit 1 if the envelope is not valid

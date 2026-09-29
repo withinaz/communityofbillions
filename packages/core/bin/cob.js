@@ -10,7 +10,7 @@
  * Exit codes: `0` success, `1` a protocol or validation error, `2` a usage error.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -36,6 +36,7 @@ Usage: cob <command> [options]
 Identity
   keygen                          Generate an agent identity and write its secret file
     --out <path>                    (required) where to write the secret
+    --force                         overwrite an existing secret file
   id                              Print the agent id for a secret file
     --key <path>                    (required)
 
@@ -96,6 +97,7 @@ const OPTIONS = {
   policy: { type: 'string' },
   request: { type: 'string' },
   receipt: { type: 'string' },
+  force: { type: 'boolean' },
   json: { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
   version: { type: 'boolean', short: 'V' },
@@ -170,10 +172,25 @@ function main() {
  */
 function cmdKeygen(values) {
   const out = requireOption(values.out, '--out');
+  const target = resolve(out);
+
+  if (existsSync(target) && values.force !== true) {
+    let existingId;
+    try {
+      const secret = JSON.parse(readFileSync(target, 'utf8'));
+      existingId = AgentIdentity.fromSecret(secret).id;
+    } catch {
+      existingId = undefined;
+    }
+    if (existingId !== undefined) {
+      fail(`refusing to overwrite ${target} (existing agent id ${existingId}); pass --force to replace it`, 1);
+    }
+    fail(`refusing to overwrite ${target}; pass --force to replace it`, 1);
+  }
+
   const identity = AgentIdentity.generate();
   const secret = identity.exportSecret();
 
-  const target = resolve(out);
   mkdirSync(dirname(target), { recursive: true });
   // 0600 is advisory on Windows but authoritative on POSIX. Ask for it either way.
   writeFileSync(target, `${JSON.stringify(secret, null, 2)}\n`, { mode: 0o600 });
@@ -231,11 +248,11 @@ function cmdVerify(values) {
   if (values.json === true) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else if (result.valid) {
-    process.stdout.write(`✔ signature ok · key ${shortAgentId(String(envelope.from))} · not expired\n`);
+    process.stdout.write(`ok signature ${shortAgentId(String(envelope.from))}\n`);
     process.stdout.write(`  type    ${envelope.type}\n`);
     process.stdout.write(`  digest  ${envelopeDigest(/** @type {any} */ (envelope))}\n`);
   } else {
-    process.stderr.write(`✘ ${result.code}: ${result.reason}\n`);
+    process.stderr.write(`${result.code}: ${result.reason}\n`);
   }
 
   process.exit(result.valid ? 0 : 1);
@@ -246,12 +263,9 @@ function cmdVerify(values) {
  */
 function cmdInspect(values) {
   const envelope = parseJson(readSource(requireOption(values.envelope, '--envelope')), '--envelope');
-  // Inspection must never be mistaken for verification.
   const result = checkEnvelope(envelope);
   process.stdout.write(`${JSON.stringify(envelope, null, 2)}\n`);
-  process.stderr.write(
-    `\n${result.valid ? '✔' : '✘'} ${result.valid ? 'signature valid' : `${result.code}: ${result.reason}`}\n`,
-  );
+  process.stderr.write(`\n${result.valid ? 'ok' : result.code + ': ' + result.reason}\n`);
   process.exit(result.valid ? 0 : 1);
 }
 
@@ -294,9 +308,9 @@ function cmdReceiptCheck(values) {
   if (values.json === true) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else if (result.matches) {
-    process.stdout.write('✔ receipt settles the request\n');
+    process.stdout.write('receipt settles the request\n');
   } else {
-    process.stderr.write(`✘ ${result.problems.length} problem(s):\n`);
+    process.stderr.write(`${result.problems.length} problem(s):\n`);
     for (const problem of result.problems) {
       process.stderr.write(`  - ${problem.code}: ${problem.message}\n`);
     }
@@ -304,13 +318,6 @@ function cmdReceiptCheck(values) {
   process.exit(result.matches ? 0 : 1);
 }
 
-/* ------------------------------------------------------------------ helpers */
-
-/**
- * @param {unknown} value
- * @param {string} flag
- * @returns {string}
- */
 function requireOption(value, flag) {
   if (typeof value !== 'string' || value.length === 0) {
     fail(`${flag} is required`, 2);
@@ -318,10 +325,6 @@ function requireOption(value, flag) {
   return value;
 }
 
-/**
- * @param {string} path
- * @returns {string}
- */
 function readSource(path) {
   if (path === '-') {
     return readFileSync(0, 'utf8');
@@ -329,11 +332,6 @@ function readSource(path) {
   return readFileSync(resolve(path), 'utf8');
 }
 
-/**
- * @param {string} text
- * @param {string} label
- * @returns {any}
- */
 function parseJson(text, label) {
   try {
     return JSON.parse(text);
@@ -342,11 +340,6 @@ function parseJson(text, label) {
   }
 }
 
-/**
- * @param {string} text
- * @param {string} label
- * @returns {number}
- */
 function parsePositiveInteger(text, label) {
   const value = Number(text);
   if (!Number.isInteger(value) || value <= 0) {
@@ -355,21 +348,13 @@ function parsePositiveInteger(text, label) {
   return value;
 }
 
-/**
- * @param {string} path
- * @returns {AgentIdentity}
- */
 function loadIdentity(path) {
   const secret = parseJson(readSource(path), `key file ${path}`);
   return AgentIdentity.fromSecret(secret);
 }
 
-/**
- * @param {unknown} value
- * @param {any} values
- */
 function emit(value, values) {
-  const text = `${JSON.stringify(value, null, values.json === true ? 2 : 2)}\n`;
+  const text = `${JSON.stringify(value, null, 2)}\n`;
   if (values.out === undefined) {
     process.stdout.write(text);
     return;
@@ -380,11 +365,6 @@ function emit(value, values) {
   process.stderr.write(`wrote ${target}\n`);
 }
 
-/**
- * @param {string} message
- * @param {number} code
- * @returns {never}
- */
 function fail(message, code) {
   process.stderr.write(`${message}\n`);
   process.exit(code);

@@ -11,6 +11,20 @@ Rules for this file:
 
 ---
 
+## 2026-09-29 — keygen refuses to overwrite an existing secret
+
+**Attempted:** stop `cob keygen --out` from silently destroying an existing identity file.
+
+**Landed:**
+
+- `cob keygen` exits non-zero if `--out` already exists, names the file, and prints the existing agent id when the file is a readable secret.
+- `--force` is required to replace the file.
+- Covered by `packages/core/test/cli-keygen.test.js`.
+
+**Still broken / not done:**
+
+- Other CLI write paths (`--out` on `sign` / `request`) still overwrite without asking.
+
 ## 2026-09-28 — Bootstrap
 
 **Attempted:** stand up the repository with enough real substance to be worth a stranger's attention.
