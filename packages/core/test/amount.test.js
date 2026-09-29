@@ -67,6 +67,35 @@ describe('formatBaseUnits', () => {
     }
   });
 
+  it('round-trips generated valid amounts across decimal counts', () => {
+    const seed = 0xC0B10001;
+    const random = createSeededRandom(seed);
+    const cases = [
+      { amount: '0', decimals: 0 },
+      { amount: '1', decimals: 0 },
+      { amount: '42', decimals: 0 },
+    ];
+
+    for (let index = 0; index < 500; index += 1) {
+      const decimals = index < 19 ? index : random.integer(19);
+      cases.push({ amount: randomAmount(random, decimals), decimals });
+    }
+
+    for (const { amount, decimals } of cases) {
+      let baseUnits;
+      assert.doesNotThrow(() => {
+        baseUnits = parseAmountToBaseUnits(amount, decimals);
+      }, `seed ${seed}: parseAmountToBaseUnits(${amount}, ${decimals}) should not throw`);
+
+      const formatted = formatBaseUnits(baseUnits, decimals);
+      assert.equal(
+        compareAmounts(formatted, amount, decimals),
+        0,
+        `seed ${seed}: ${formatted} should be numerically equal to ${amount} with ${decimals} decimals`,
+      );
+    }
+  });
+
   it('trims trailing zeros', () => {
     assert.equal(formatBaseUnits(2_500_000n, 6), '2.5');
     assert.equal(formatBaseUnits(1_000_000n, 6), '1');
@@ -137,4 +166,37 @@ describe('decimalsFor', () => {
 function trimZeros(amount) {
   if (!amount.includes('.')) return amount;
   return amount.replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/**
+ * @param {number} seed
+ * @returns {{ integer(limit: number): number }}
+ */
+function createSeededRandom(seed) {
+  let state = seed >>> 0;
+  return {
+    integer(limit) {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      return state % limit;
+    },
+  };
+}
+
+/**
+ * @param {{ integer(limit: number): number }} random
+ * @param {number} decimals
+ * @returns {string}
+ */
+function randomAmount(random, decimals) {
+  const whole = String(random.integer(1_000_000));
+  const fractionLength = decimals === 0 ? 0 : random.integer(decimals + 1);
+
+  if (fractionLength === 0) return whole;
+
+  let fraction = '';
+  for (let index = 0; index < fractionLength; index += 1) {
+    fraction += String(random.integer(10));
+  }
+
+  return `${whole}.${fraction}`;
 }
