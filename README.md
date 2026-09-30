@@ -138,7 +138,7 @@ JOURNAL.md       Public, append-only log of what changed and why
 ## How this project is maintained
 
 This repository is kept alive by an automated maintenance agent that performs small, real increments
-three times a week and records what it did — including what it got wrong — in [JOURNAL.md](JOURNAL.md).
+twice a week and records what it did — including what it got wrong — in [JOURNAL.md](JOURNAL.md).
 Its brief, its quality gates, and its standing prohibitions are all public:
 
 - [agents/maintenance/README.md](agents/maintenance/README.md) — what it is and what it may do

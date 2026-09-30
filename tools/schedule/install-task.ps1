@@ -19,7 +19,7 @@
     Scheduler does not take a time zone. Default 08:30.
 
 .PARAMETER Days
-    Days of the week. Default Monday, Wednesday, Friday.
+    Days of the week. Default Tuesday and Thursday.
 
 .PARAMETER TimeoutHours
     Hard limit on a single pass. Default 2 hours.
@@ -36,7 +36,7 @@
 param(
     [string] $At = '08:30',
     [ValidateSet('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')]
-    [string[]] $Days = @('Monday', 'Wednesday', 'Friday'),
+    [string[]] $Days = @('Tuesday', 'Thursday'),
     [int] $TimeoutHours = 2
 )
 
