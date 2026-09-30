@@ -11,6 +11,60 @@ Rules for this file:
 
 ---
 
+## 2026-09-30 — Lock the mainnet opt-in, name unlimited spending
+
+**Attempted:** carry out operator directive D-1 (issue #7): make `allowMainnet: true` a refusal
+rather than an opt-in, and add an `allowUnlimited` policy flag naming the absence of a spending
+ceiling. The directive is the pass, so nothing else was attempted.
+
+**Landed:**
+
+- `normalizePolicy({ allowMainnet: true })` throws `PolicyError` whose message says the refusal is
+  deliberate, names issue #7, and carries `{ allowMainnet: true, issue: 7 }` in `details`. The mainnet
+  chains stay in `CHAIN_REGISTRY` and the field stays readable.
+- The mainnet check that used to sit inline in `assertChainAllowed` is now `assertMainnetAllowed`,
+  exported and covered by a test on both sides (mainnet refused with `allowMainnet: false`, allowed
+  with `true`). This is the option the directive offered — expose the check — and not a bypass:
+  `assertChainAllowed` still normalises the policy first, so the opt-in cannot be reached through
+  the payment path.
+- `DEFAULT_POLICY.allowUnlimited` is `true`; `normalizePolicy` validates it as a boolean and carries
+  it through. No behaviour changed: an empty `maxAmount` still means no ceiling.
+- `spec/COB-1.md` §9 documents the lock, adds `allowUnlimited`, and has a change-log row.
+- `docs/security.md` T10 no longer *proposes* a fix; T9 notes the opt-in refusal.
+  `docs/architecture.md`, `docs/glossary.md`, and `packages/core/README.md` were showing
+  `allowMainnet: true` as the way to open mainnet and now describe the lock.
+- CI's mainnet job now asserts that `allowMainnet: true` is refused, and the ceiling job runs on
+  `base-sepolia` so it tests the ceiling instead of being short-circuited by the mainnet refusal.
+- Tests: `policy.test.js` pins the refusal and its wording, the default `allowUnlimited`, the
+  boolean validation, and both sides of `assertMainnetAllowed`; `payments.test.js` asserts a mainnet
+  request is refused even when the policy asks for the opt-in.
+
+**Gate results:** syntax check clean; `node --test` 169 pass / 0 fail; `examples/two-agents/run.js`
+19/19 expectations; runner tests 40/40. The suite had to be invoked as
+`node --test --test-isolation=none` in this environment: the default runner spawns a child per test
+file and the pass sandbox denies that pipe (`spawn EPERM`). It is the same test files and the same
+assertions; CI runs the unmodified command. Noted because CHECKS.md says the gates must be run for
+real, and the invocation differed from the one written there.
+
+**Still broken / not done:**
+
+- `allowUnlimited` is validated and carried, but nothing reads it yet. That is what the directive
+  asked for: it is a name for a decision that only matters when mainnet opens, and T10 says so.
+- Mainnet remains unreachable by configuration, as intended. There is no way to open it short of an
+  operator changing `normalizePolicy` in a visible commit.
+- The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are
+  still claims (T11).
+- **The agent's own `git push` failed in this pass environment.** git runs its credential helper
+  through the MSYS `sh`, which cannot create its signal pipe under the pass sandbox
+  (`fatal error - couldn't create signal pipe, Win32 error 5`), so git fell back to asking for a
+  username it does not have. The commits are local; the runner that started this pass pushes after
+  it returns (`tools/schedule/run-pass.ps1`). Issue #7 is closed against `3e5db76` on that basis.
+
+**Next:** the Phase 1 items — the `/.well-known/cob.json` discovery document (issue #1) or the
+read-only reference registry (issue #2).
+
+---
+
 ## 2026-09-28 — Bootstrap
 
 **Attempted:** stand up the repository with enough real substance to be worth a stranger's attention.
