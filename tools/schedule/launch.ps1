@@ -52,6 +52,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# The runner captures native command output; hand it a UTF-8-aware console so that non-ASCII
+# text in the logs survives. See the same note in run-pass.ps1.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # $PSScriptRoot is NOT populated inside a param() default block when the script declares
 # [CmdletBinding()] and is started by Windows PowerShell 5.1 — which is exactly how the
 # scheduled task starts this file. Resolving it here instead is the difference between a task

@@ -43,6 +43,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Native commands write UTF-8. When their output is captured rather than shown on a console,
+# PowerShell decodes it with the OEM code page, which turns every em dash in the agent's
+# reasoning into "ΓÇö" in the log. The logs are meant to be read, so fix the decoding.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # ---------------------------------------------------------------- paths
 
 $RepoPath = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
