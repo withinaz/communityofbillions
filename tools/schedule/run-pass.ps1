@@ -125,6 +125,30 @@ function Write-Result {
     Write-Log "result     : $line"
 }
 
+function Get-PowerShellHost {
+    <#
+        A pwsh.exe this process can actually launch, or $null.
+
+        `Get-Command pwsh` is not good enough. A Microsoft Store install of PowerShell 7 puts a
+        0-byte app execution alias on PATH; it works from an interactive shell and fails with
+        ERROR_FILE_NOT_FOUND from an unattended one. $PSHOME is the real installation directory
+        of the interpreter currently running, which is exactly the thing we want to launch.
+    #>
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        $candidate = Join-Path $PSHOME 'pwsh.exe'
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+    }
+
+    $found = Get-Command pwsh -ErrorAction SilentlyContinue
+    if ($found) {
+        $item = Get-Item -LiteralPath $found.Source -ErrorAction SilentlyContinue
+        # A file of length zero is the app execution alias, not a program.
+        if ($item -and $item.Length -gt 0) { return $found.Source }
+    }
+
+    return $null
+}
+
 function Test-Gates {
     <#
         The quality gates from agents/maintenance/CHECKS.md, applied to whatever is currently
@@ -167,11 +191,16 @@ function Test-Gates {
     # what has already been handled — has tests, and they run with the rest of the gates.
     $runnerTests = Join-Path $RepoRoot 'tools/schedule/tests/run-pass.tests.ps1'
     if (Test-Path -LiteralPath $runnerTests) {
-        $runnerOutput = & pwsh -NoProfile -File $runnerTests 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Log '  the runner tests failed:' 'WARN'
-            $runnerOutput | Select-Object -Last 25 | ForEach-Object { Write-Log "    $_" 'WARN' }
-            $ok = $false
+        $testHost = Get-PowerShellHost
+        if ($testHost) {
+            $runnerOutput = & $testHost -NoProfile -File $runnerTests 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                Write-Log '  the runner tests failed:' 'WARN'
+                $runnerOutput | Select-Object -Last 25 | ForEach-Object { Write-Log "    $_" 'WARN' }
+                $ok = $false
+            }
+        } else {
+            Write-Log '  no launchable PowerShell 7 host, so the runner tests were skipped' 'WARN'
         }
     }
 

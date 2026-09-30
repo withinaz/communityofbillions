@@ -33,6 +33,24 @@ documented specification revision.
 - `result.txt` — one line per scheduled pass, newest first, for the operator. Written only by a real
   pass; the dry-run and gate modes do not touch it.
 
+### Fixed
+
+- **The scheduled task did not run.** Its action was `pwsh.exe`, which resolves to a **0-byte app
+  execution alias** when PowerShell 7 comes from the Microsoft Store. Task Scheduler accepts the
+  registration, reports the task as Ready, fires it on schedule, and then fails in milliseconds
+  with `0x80070002` (`ERROR_FILE_NOT_FOUND`) — with nothing in the repository to show for it.
+  The task is now started by Windows PowerShell 5.1, whose path in `System32` cannot move, and
+  [`tools/schedule/launch.ps1`](tools/schedule/launch.ps1) hands over to a real PowerShell 7. No new
+  dependency: 5.1 ships with Windows.
+- **`$PSScriptRoot` is empty in a `param()` default under PowerShell 5.1** when the script declares
+  `[CmdletBinding()]`. The launcher and the runner tests resolved their paths that way, so both
+  would have died at parameter binding. Both now resolve their paths in the body of the script.
+  This is verified behaviour: the same script without `[CmdletBinding()]` binds it correctly, and
+  PowerShell 7 does not have the problem.
+- The runner no longer calls `pwsh` from `PATH` to run its own tests; it uses the real
+  installation directory of the interpreter currently running (`$PSHOME`), for the same alias
+  reason.
+
 ## [0.1.0] — 2026-09-28
 
 First draft. Everything below is new.

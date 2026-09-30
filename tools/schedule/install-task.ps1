@@ -44,16 +44,34 @@ $ErrorActionPreference = 'Stop'
 
 $TaskName = 'communityofbillions-maintenance'
 $Runner = (Resolve-Path (Join-Path $PSScriptRoot 'run-pass.ps1')).Path
+$Launcher = (Resolve-Path (Join-Path $PSScriptRoot 'launch.ps1')).Path
 $RepoPath = (Resolve-Path (Join-Path $PSScriptRoot '..' '..')).Path
 
-if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
-    throw 'pwsh (PowerShell 7) was not found on PATH; install it or adjust this script to use powershell.exe'
+# The task is started by Windows PowerShell 5.1, whose path is in System32 and cannot move, and
+# which hands over to launch.ps1. Registering the task as "pwsh.exe" instead looks correct, is
+# accepted by Task Scheduler, reports itself as Ready, fires on schedule, and then fails in
+# milliseconds with 0x80070002 — because a Store-installed PowerShell 7 is only reachable
+# through a 0-byte app execution alias that an unattended start cannot resolve.
+$SystemPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+if (-not (Test-Path -LiteralPath $SystemPowerShell)) {
+    throw "Windows PowerShell was not found at '$SystemPowerShell'; this machine is not in a state this script understands"
 }
 
+# Ask the launcher what it would start. Doing the detection in one place means the installer
+# exercises the exact code path an unattended run will take, instead of a copy that can drift.
+$detected = (& $SystemPowerShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Launcher -FindOnly 2>&1 | Out-String).Trim()
+
 Write-Host "Task name : $TaskName"
-Write-Host "Runner    : $Runner"
+Write-Host "Launcher  : $Launcher"
+Write-Host "Started by: $SystemPowerShell"
 Write-Host "Repository: $RepoPath"
 Write-Host "Schedule  : $($Days -join ', ') at $At"
+if ($detected) {
+    Write-Host "PowerShell 7: $detected"
+} else {
+    Write-Warning 'The launcher found no PowerShell 7. The pass will run under Windows PowerShell 5.1.'
+    Write-Warning 'It should still work, but install PowerShell 7 if you can.'
+}
 
 $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($existing) {
@@ -61,8 +79,8 @@ if ($existing) {
 }
 
 $action = New-ScheduledTaskAction `
-    -Execute 'pwsh.exe' `
-    -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Runner`"" `
+    -Execute $SystemPowerShell `
+    -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Launcher`"" `
     -WorkingDirectory $RepoPath
 
 $triggers = foreach ($day in $Days) {

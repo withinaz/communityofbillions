@@ -21,11 +21,17 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $RunnerPath = (Join-Path $PSScriptRoot '..' 'run-pass.ps1')
+    [string] $RunnerPath
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Resolved in the body, not in the param() default: under Windows PowerShell 5.1 a script that
+# declares [CmdletBinding()] binds $PSScriptRoot as an empty string in its parameter defaults.
+if ([string]::IsNullOrWhiteSpace($RunnerPath)) {
+    $RunnerPath = Join-Path $PSScriptRoot '..' 'run-pass.ps1'
+}
 
 $script:Passed = 0
 $script:Failed = 0
