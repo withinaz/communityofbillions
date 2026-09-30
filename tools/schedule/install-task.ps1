@@ -12,10 +12,11 @@
     credentials from the credential store, and it has no business acting as a background service.
 
     Windows will start a missed run as soon as the machine is available (StartWhenAvailable),
-    so a laptop that was asleep at 09:00 still gets its pass later the same day.
+    so a laptop that was asleep at 08:30 still gets its pass later the same day.
 
 .PARAMETER At
-    Time of day for each run, 24-hour HH:mm. Default 09:00.
+    Time of day for each run, 24-hour HH:mm, in the machine's LOCAL time — Windows Task
+    Scheduler does not take a time zone. Default 08:30.
 
 .PARAMETER Days
     Days of the week. Default Monday, Wednesday, Friday.
@@ -33,7 +34,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $At = '09:00',
+    [string] $At = '08:30',
     [ValidateSet('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')]
     [string[]] $Days = @('Monday', 'Wednesday', 'Friday'),
     [int] $TimeoutHours = 2
