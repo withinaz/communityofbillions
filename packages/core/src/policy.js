@@ -4,8 +4,14 @@
  * The single most important function in this file is {@link assertChainAllowed}.
  *
  * An autonomous agent that can move money is an agent that can be tricked into moving money.
- * So mainnet is **off by default**, and turning it on is an explicit, visible act by the
- * operator (`allowMainnet: true`), not a default that a prompt can talk its way into.
+ * So mainnet is not merely **off by default** in this version — the opt-in itself is
+ * **refused** (`allowMainnet: true` throws; see issue #7). Content cannot talk its way past a
+ * `throw`.
+ *
+ * `allowUnlimited` names the other half of the same problem: unbounded spending. It defaults to
+ * `true`, which describes today's behaviour exactly (an empty `maxAmount` means no ceiling), and
+ * exists so that the configuration permitting unbounded spending can require a visible act on
+ * the day mainnet is unlocked.
  *
  * Unknown chains are refused rather than passed through. Fail closed.
  */
@@ -61,11 +67,14 @@ export const CHAIN_REGISTRY = Object.freeze({
 /**
  * The policy an agent runs with when the operator has said nothing.
  *
- * Testnets only. No spending cap (`maxAmount` empty) because a cap implies an expectation
- * of real value; on testnet the useful default is "anything goes, on play money".
+ * Testnets only. No spending cap (`maxAmount` empty), named by `allowUnlimited: true`: a cap
+ * implies an expectation of real value, and on testnet the useful default is "anything goes, on
+ * play money". Mainnet is unreachable regardless, because {@link normalizePolicy} refuses the
+ * opt-in itself.
  */
 export const DEFAULT_POLICY = Object.freeze({
   allowMainnet: false,
+  allowUnlimited: true,
   allowedChains: null,
   allowedAssets: null,
   maxAmount: Object.freeze({}),
@@ -97,9 +106,13 @@ export function resolveChain(chain) {
 /**
  * Fill in defaults and validate the shape of a caller-supplied policy.
  *
+ * `allowMainnet: true` is **refused**, not honoured. The field stays readable and documented,
+ * and the mainnet chains stay registered, because the point is to disable the *opt-in* — not to
+ * pretend mainnet does not exist. The refusal is deliberate and says so.
+ *
  * @param {Partial<typeof DEFAULT_POLICY>} [policy]
- * @returns {{ allowMainnet: boolean, allowedChains: string[] | null, allowedAssets: string[] | null, maxAmount: Record<string, string> }}
- * @throws {ValidationError}
+ * @returns {{ allowMainnet: boolean, allowUnlimited: boolean, allowedChains: string[] | null, allowedAssets: string[] | null, maxAmount: Record<string, string> }}
+ * @throws {ValidationError | PolicyError}
  */
 export function normalizePolicy(policy = {}) {
   if (policy === null || typeof policy !== 'object') {
@@ -109,6 +122,19 @@ export function normalizePolicy(policy = {}) {
   const allowMainnet = policy.allowMainnet ?? DEFAULT_POLICY.allowMainnet;
   if (typeof allowMainnet !== 'boolean') {
     throw new ValidationError('policy.allowMainnet must be a boolean');
+  }
+  // The lock is the opt-in, not the chain. This is a deliberate refusal by the operator, so the
+  // message must read as a decision, never as a bug in the caller or in this function.
+  if (allowMainnet === true) {
+    throw new PolicyError(
+      'policy.allowMainnet = true is deliberately refused: mainnet is unavailable in this version of COB/1 (issue #7)',
+      { allowMainnet: true, issue: 7 },
+    );
+  }
+
+  const allowUnlimited = policy.allowUnlimited ?? DEFAULT_POLICY.allowUnlimited;
+  if (typeof allowUnlimited !== 'boolean') {
+    throw new ValidationError('policy.allowUnlimited must be a boolean');
   }
 
   const allowedChains = policy.allowedChains ?? null;
@@ -136,10 +162,33 @@ export function normalizePolicy(policy = {}) {
 
   return {
     allowMainnet,
+    allowUnlimited,
     allowedChains: allowedChains === null ? null : [...allowedChains],
     allowedAssets: allowedAssets === null ? null : [...allowedAssets],
     maxAmount: { ...maxAmount },
   };
+}
+
+/**
+ * The mainnet opt-in check, kept separate so that it stays testable while the opt-in is locked.
+ *
+ * `normalizePolicy` refuses to produce a policy with `allowMainnet: true`, which would otherwise
+ * leave the "mainnet is allowed" side of this branch as code no test can reach. It is not dead
+ * code: it is the security control that runs the day the operator unlocks mainnet, and a control
+ * nobody has exercised is a control nobody should trust. Exported for that test.
+ *
+ * @param {string} chain
+ * @param {(typeof CHAIN_REGISTRY)[keyof typeof CHAIN_REGISTRY]} resolved
+ * @param {boolean} allowMainnet
+ * @throws {PolicyError}
+ */
+export function assertMainnetAllowed(chain, resolved, allowMainnet) {
+  if (resolved.network === 'mainnet' && !allowMainnet) {
+    throw new PolicyError(
+      `chain "${chain}" is mainnet and this agent's policy has allowMainnet=false`,
+      { chain, network: resolved.network, hint: 'mainnet is locked in this version; see issue #7' },
+    );
+  }
 }
 
 /**
@@ -154,12 +203,7 @@ export function assertChainAllowed(chain, policy = DEFAULT_POLICY) {
   const resolved = resolveChain(chain);
   const active = normalizePolicy(policy);
 
-  if (resolved.network === 'mainnet' && !active.allowMainnet) {
-    throw new PolicyError(
-      `chain "${chain}" is mainnet and this agent's policy has allowMainnet=false`,
-      { chain, network: resolved.network, hint: 'set policy.allowMainnet = true to opt in explicitly' },
-    );
-  }
+  assertMainnetAllowed(chain, resolved, active.allowMainnet);
 
   if (active.allowedChains !== null && !active.allowedChains.includes(chain)) {
     throw new PolicyError(

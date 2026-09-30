@@ -41,7 +41,12 @@ not for signing.
 is rejected rather than passed through.
 
 **Mainnet gate** — The `allowMainnet` policy flag, default `false`. A code-level refusal, not an
-instruction to a model.
+instruction to a model. In this version the opt-in itself is locked: setting it to `true` throws
+(issue #7), so mainnet is unreachable by construction.
+
+**`allowUnlimited`** — A policy flag, default `true`, naming the absence of a spending ceiling: an
+empty `maxAmount` means an amount is uncapped. It exists so that unbounded spending can require a
+visible act once the mainnet gate opens.
 
 **Nonce** — ≥ 16 bytes of entropy, base64url, unique per envelope. The replay key is
 `(from, nonce)`.

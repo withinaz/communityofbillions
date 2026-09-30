@@ -87,8 +87,10 @@ describe('payment requests', () => {
     );
   });
 
-  it('allows a mainnet request when the operator opted in', () => {
-    assert.doesNotThrow(() => requestBody({ chain: 'base', policy: { allowMainnet: true } }));
+  it('refuses a mainnet request even when the policy asks for the opt-in', () => {
+    // The opt-in is locked (issue #7), so this is refused at policy normalisation, before the
+    // chain is ever considered.
+    assert.throws(() => requestBody({ chain: 'base', policy: { allowMainnet: true } }), PolicyError);
   });
 
   it('refuses a non-EVM-looking payTo address', () => {

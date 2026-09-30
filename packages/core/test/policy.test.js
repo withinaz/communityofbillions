@@ -8,6 +8,7 @@ import {
   assertAmountAllowed,
   assertAssetAllowed,
   assertChainAllowed,
+  assertMainnetAllowed,
   assertPaymentAllowed,
   explorerTxUrl,
   isKnownChain,
@@ -62,8 +63,28 @@ describe('the mainnet gate', () => {
     assert.throws(() => assertChainAllowed('ethereum', DEFAULT_POLICY), PolicyError);
   });
 
-  it('allows mainnet only when explicitly enabled', () => {
-    assert.doesNotThrow(() => assertChainAllowed('base', { allowMainnet: true }));
+  it('refuses the opt-in itself, deliberately, and says why', () => {
+    // The lock is the opt-in, not the chain. The message must read as a decision, and it must
+    // name the issue so that a caller who trips it can find the reasoning instead of a bug report.
+    assert.throws(
+      () => normalizePolicy({ allowMainnet: true }),
+      (error) =>
+        error instanceof PolicyError
+        && /deliberately refused/.test(error.message)
+        && /issue #7/.test(error.message),
+    );
+    assert.throws(() => assertChainAllowed('base', { allowMainnet: true }), PolicyError);
+  });
+
+  it('keeps the mainnet check correct behind the lock', () => {
+    // normalizePolicy can no longer produce a policy that permits mainnet, so the "allowed"
+    // side of the check is exercised directly. It is the check that will guard mainnet the day
+    // the operator unlocks it; it must not rot while it waits.
+    const base = resolveChain('base');
+    const sepolia = resolveChain('base-sepolia');
+    assert.throws(() => assertMainnetAllowed('base', base, false), PolicyError);
+    assert.doesNotThrow(() => assertMainnetAllowed('base', base, true));
+    assert.doesNotThrow(() => assertMainnetAllowed('base-sepolia', sepolia, false));
   });
 
   it('honours an allow-list', () => {
@@ -178,10 +199,19 @@ describe('normalizePolicy', () => {
   it('fills in the defaults', () => {
     assert.deepEqual(normalizePolicy(), {
       allowMainnet: false,
+      allowUnlimited: true,
       allowedChains: null,
       allowedAssets: null,
       maxAmount: {},
     });
+  });
+
+  it('names the absence of a spending ceiling', () => {
+    // The flag describes today's behaviour exactly: no maxAmount means no ceiling. It is
+    // carried now so that the configuration permitting unbounded spend is visible later.
+    assert.equal(DEFAULT_POLICY.allowUnlimited, true);
+    assert.equal(normalizePolicy().allowUnlimited, true);
+    assert.equal(normalizePolicy({ allowUnlimited: false }).allowUnlimited, false);
   });
 
   it('copies arrays rather than aliasing the caller’s', () => {
@@ -193,6 +223,7 @@ describe('normalizePolicy', () => {
 
   it('rejects nonsense', () => {
     assert.throws(() => normalizePolicy({ allowMainnet: 'yes' }), ValidationError);
+    assert.throws(() => normalizePolicy({ allowUnlimited: 'yes' }), ValidationError);
     assert.throws(() => normalizePolicy({ allowedChains: 'base-sepolia' }), ValidationError);
     assert.throws(() => normalizePolicy({ allowedChains: ['nope'] }), PolicyError);
     assert.throws(() => normalizePolicy({ maxAmount: { USDC: 10 } }), ValidationError);

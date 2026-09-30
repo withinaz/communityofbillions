@@ -102,18 +102,20 @@ decision, so the protocol refuses to make it automatically.
 
 **Mitigation.** The gate is a `throw` in `assertChainAllowed`. It reads a policy object, not a
 message. Content cannot reach it. This is the reason the gate is not an instruction in a system
-prompt.
+prompt. In this version the opt-in itself is also refused: `allowMainnet: true` throws before any
+chain is considered (see T10 and issue #7).
 
 ### T10 — Spending over the ceiling
 
 *C* or *B* induces a large payment.
 
-**Mitigation.** `maxAmount` per asset, compared numerically. **Gap:** the default policy has no
-ceiling, because a ceiling on play money is noise. An operator enabling mainnet **SHOULD** set one,
-and the spec says so — but nothing enforces that a ceiling is present when mainnet is enabled.
-
-**Candidate fix:** refuse `allowMainnet: true` unless `maxAmount` is non-empty. Recorded here rather
-than implemented, because it is a design decision that deserves an issue, not a silent patch.
+**Mitigation.** `maxAmount` per asset, compared numerically, and `allowUnlimited` to name the
+alternative. The default policy has no ceiling (`maxAmount` empty, `allowUnlimited: true`), because
+a ceiling on play money is noise — and because mainnet is locked (T9), an unbounded amount can only
+ever be testnet value. The flag is the *visible act* the ceiling would otherwise lack: the day the
+mainnet opt-in is unlocked, an operator who permits unbounded spending must do so by setting
+`allowUnlimited: false`, and can then be asked for a `maxAmount`. Nothing pairs the two
+automatically — the lock is what keeps that from mattering today.
 
 ### T11 — Receipt forgery
 

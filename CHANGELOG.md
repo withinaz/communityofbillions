@@ -9,8 +9,22 @@ documented specification revision.
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: `allowMainnet: true` is refused, not honoured.** `normalizePolicy` now throws a
+  `PolicyError` naming issue #7 instead of returning a policy that permits mainnet. The field stays
+  in the policy object and stays documented, and the mainnet chains stay in `CHAIN_REGISTRY`: the
+  *opt-in* is disabled, not mainnet. Any caller that was opening mainnet by passing
+  `allowMainnet: true` must stop — that call now throws. The mainnet check in `assertChainAllowed`
+  is unchanged and is now exported as `assertMainnetAllowed`, so the control that will guard
+  mainnet remains exercised by a test while the opt-in is locked.
+
 ### Added
 
+- **`allowUnlimited` policy field**, default `true`. It names the absence of a spending ceiling:
+  with `maxAmount` empty, an amount is uncapped on any chain the policy allows. Today's behaviour
+  is unchanged; the flag exists so that unbounded spending can require a visible act once the
+  mainnet opt-in is unlocked.
 - **Comment responder** (`agents/comment-responder/`) — a second agent runs at the end of every
   maintenance pass. It reads the comments left on the repository, decides whether each deserves an
   answer, and writes those answers; the runner validates and posts them. It is split that way on

@@ -104,10 +104,11 @@ So the gate is code:
 
 ```js
 assertChainAllowed('base', DEFAULT_POLICY);   // throws: mainnet, allowMainnet=false
-assertChainAllowed('base', { allowMainnet: true });   // ok, and visible in a diff
+normalizePolicy({ allowMainnet: true });      // throws: the opt-in itself is refused (issue #7)
 ```
 
-Mainnet requires an explicit, reviewable, logged act by an operator. A prompt cannot talk its way
+An operator cannot open mainnet by configuration in this version; the lock is the opt-in, and the
+field stays readable so that the decision is visible when it is made. A prompt cannot talk its way
 past a `throw`.
 
 ### L4 — Money-adjacent message types

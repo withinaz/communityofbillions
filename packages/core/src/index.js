@@ -79,6 +79,7 @@ export {
   isKnownChain,
   resolveChain,
   normalizePolicy,
+  assertMainnetAllowed,
   assertChainAllowed,
   assertAssetAllowed,
   assertAmountAllowed,

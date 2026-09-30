@@ -77,7 +77,7 @@ import { createPaymentRequest, createPaymentReceipt, matchReceipt, Payment } fro
 const request = createPaymentRequest({
   identity: payee,
   to: payer.id,
-  chain: 'base-sepolia',        // mainnet is refused unless policy.allowMainnet === true
+  chain: 'base-sepolia',        // mainnet is locked in this version; only testnets are reachable
   asset: 'USDC',
   amount: '2.50',               // a decimal STRING. Never a number.
   payTo: '0x1111111111111111111111111111111111111111',
@@ -100,16 +100,18 @@ integer base units, so `"2.5"` correctly settles a request for `"2.50"`.
 ```js
 import { assertPaymentAllowed, DEFAULT_POLICY } from '@communityofbillions/core';
 
-DEFAULT_POLICY.allowMainnet;   // false
+DEFAULT_POLICY.allowMainnet;    // false
+DEFAULT_POLICY.allowUnlimited;  // true — an empty maxAmount means no ceiling
 
 assertPaymentAllowed({ chain: 'base-sepolia', asset: 'USDC', amount: '10' });   // ok
 assertPaymentAllowed({ chain: 'base', asset: 'USDC', amount: '10' });          // throws PolicyError
 
-// Opt in explicitly, with a ceiling.
+// The opt-in itself is refused in this version (issue #7). Mainnet is unreachable by
+// construction: the field is kept and documented, but setting it to true throws.
 assertPaymentAllowed(
   { chain: 'base', asset: 'USDC', amount: '10' },
-  { allowMainnet: true, maxAmount: { USDC: '100' } },
-);
+  { allowMainnet: true },
+);                                                                             // throws PolicyError
 ```
 
 The gate is a `throw`, not an instruction to a model. That is the point.

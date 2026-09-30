@@ -105,7 +105,7 @@ jobs:
           fi
           echo 'ok: expired envelope refused'
 
-      - name: Mainnet is refused unless policy opts in
+      - name: Mainnet is locked and the opt-in is refused
         run: |
           set -euo pipefail
 
@@ -123,19 +123,21 @@ jobs:
           fi
           echo 'ok: mainnet refused by default'
 
+          # The opt-in itself is the lock (issue #7). Setting it to true must not open mainnet.
           echo '{"allowMainnet":true,"maxAmount":{"USDC":"100"}}' > /tmp/optin.json
 
-          node packages/core/bin/cob.js request \
-            --key /tmp/alice.cob-key.json \
-            --to "$BOB" \
-            --chain base \
-            --asset USDC \
-            --amount 1.50 \
-            --pay-to 0x1111111111111111111111111111111111111111 \
-            --policy /tmp/optin.json \
-            --out /tmp/mainnet-request.json
-
-          echo 'ok: mainnet allowed after explicit opt-in'
+          if node packages/core/bin/cob.js request \
+               --key /tmp/alice.cob-key.json \
+               --to "$BOB" \
+               --chain base \
+               --asset USDC \
+               --amount 1.50 \
+               --pay-to 0x1111111111111111111111111111111111111111 \
+               --policy /tmp/optin.json; then
+            echo '::error::allowMainnet:true was honoured; the mainnet lock is broken'
+            exit 1
+          fi
+          echo 'ok: allowMainnet:true refused'
 
       - name: A policy ceiling is enforced
         run: |
@@ -143,14 +145,16 @@ jobs:
 
           BOB=$(node -e "process.stdout.write(require('/tmp/bob.json').id)")
 
+          echo '{"maxAmount":{"USDC":"100"}}' > /tmp/ceiling.json
+
           if node packages/core/bin/cob.js request \
                --key /tmp/alice.cob-key.json \
                --to "$BOB" \
-               --chain base \
+               --chain base-sepolia \
                --asset USDC \
                --amount 100.000001 \
                --pay-to 0x1111111111111111111111111111111111111111 \
-               --policy /tmp/optin.json; then
+               --policy /tmp/ceiling.json; then
             echo '::error::an amount above the ceiling was accepted'
             exit 1
           fi
