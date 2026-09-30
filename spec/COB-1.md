@@ -299,12 +299,21 @@ Every implementation **MUST** have a policy with these properties:
 | Property | Type | Default |
 | --- | --- | --- |
 | `allowMainnet` | boolean | **`false`** |
+| `allowUnlimited` | boolean | **`true`** |
 | `allowedChains` | string[] or null | `null` (no additional restriction) |
 | `allowedAssets` | string[] or null | `null` |
 | `maxAmount` | object, asset → decimal string | `{}` (no ceiling) |
 
 - An unknown chain **MUST** be refused. Implementations **MUST NOT** guess.
-- Mainnet chains **MUST** be refused unless `allowMainnet` is `true`.
+- Mainnet chains **MUST** be refused in this version. `allowMainnet` **MUST** be `false`, and an
+  implementation **MUST** refuse a policy that sets it to `true` rather than honouring it. The
+  field stays in the policy and the mainnet chains stay registered: the *opt-in* is disabled, not
+  mainnet. This refusal is deliberate and **MUST** be reported as such — a `COB_POLICY` error that
+  names the reason — and **MUST NOT** be presented as a validation accident or a bug.
+- `allowUnlimited` names the absence of a spending ceiling. It defaults to `true`: with `maxAmount`
+  empty, an amount is uncapped, on any chain the policy allows. When the mainnet opt-in is
+  eventually unlocked, an operator who permits unbounded spending **SHOULD** have to do so
+  visibly, which is what this flag exists for.
 - `allowMainnet` and `allowedChains` are two independent gates. Listing a mainnet chain in
   `allowedChains` **MUST NOT** enable it on its own.
 - `maxAmount` comparison **MUST** be numeric, not lexicographic. Under a ceiling of `"10"`, the
@@ -377,3 +386,4 @@ lists them.
 | Version | Date | Change |
 | --- | --- | --- |
 | 0.1 | 2026-09-28 | First draft. Identity, envelope, canonical form, payment request/receipt, matching, lifecycle, policy, error codes. |
+| 0.1 | 2026-09-30 | `allowMainnet: true` is refused rather than honoured (issue #7). `allowUnlimited` added to the policy, default `true`. |
