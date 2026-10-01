@@ -301,6 +301,13 @@ export function validateStructure(envelope) {
 export function verifyEnvelope(envelope, options = {}) {
   const { now = new Date(), expectTo = undefined, clockSkewMs = 30_000, allowExpired = false } = options;
 
+  // An unparseable instant is not a clock. `x > NaN` and `x <= NaN` are both false, so a bad
+  // `now` would skip both checks below and let an expired envelope verify as valid — a silent
+  // downgrade, and one the CLI's `--now` flag can produce from a typo. Fail closed on the option.
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new ValidationError('now must be a valid Date', { now: String(now) });
+  }
+
   const e = validateStructure(envelope);
 
   const payload = signingPayload(e);

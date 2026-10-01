@@ -49,6 +49,11 @@ documented specification revision.
 
 ### Fixed
 
+- **`verifyEnvelope` no longer skips the clock checks when `now` is not a real instant.** An
+  invalid `Date` made every comparison against it false, so an *expired* envelope verified as
+  valid — reachable from `cob verify --now <typo>`. The option is now refused with
+  `COB_VALIDATION`. This tightens an input: any caller that passed an invalid `now` was silently
+  accepting expired envelopes.
 - **The scheduled task did not run.** Its action was `pwsh.exe`, which resolves to a **0-byte app
   execution alias** when PowerShell 7 comes from the Microsoft Store. Task Scheduler accepts the
   registration, reports the task as Ready, fires it on schedule, and then fails in milliseconds

@@ -183,6 +183,21 @@ describe('verifyEnvelope', () => {
     assert.doesNotThrow(() => verifyEnvelope(e, { clockSkewMs: 30_000 }));
   });
 
+  it('refuses an invalid `now` instead of skipping the expiry check', () => {
+    // Every comparison against a NaN instant is false, so before this guard an unparseable
+    // `--now` made an *expired* envelope verify as valid. Reject the option; fail closed.
+    const e = envelope({ ttlSeconds: 300, now: new Date('2026-01-01T00:00:00.000Z') });
+    const bogus = new Date(String('not-an-instant'));
+    assert.throws(
+      () => verifyEnvelope(e, { now: bogus }),
+      (error) => error instanceof ValidationError && /now must be a valid Date/.test(error.message),
+    );
+
+    const result = checkEnvelope(e, { now: bogus });
+    assert.equal(result.valid, false);
+    assert.equal(/** @type {any} */ (result).code, 'COB_VALIDATION');
+  });
+
   it('rejects expires <= created even when the signature is valid', () => {
     const e = envelope();
     const created = new Date(String(e.created));

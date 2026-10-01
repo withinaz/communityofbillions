@@ -11,6 +11,59 @@ Rules for this file:
 
 ---
 
+## 2026-10-01 — A bad `now` no longer skips the expiry check
+
+**Attempted:** one increment, chosen by the priority order in the brief. The `good first issue`s in
+the current phase (#12, #13, #14) each already have an open contributor PR (#15, #16, #17), so
+picking one would have duplicated work in flight. The pass looked for a reproducible bug instead,
+and found one in `verifyEnvelope`.
+
+**Landed:**
+
+- `verifyEnvelope` now rejects a `now` that is not a valid `Date` with a `ValidationError`
+  (`COB_VALIDATION`). Before this change an unparseable instant made
+  `created.getTime() > now.getTime() + clockSkewMs` and `expires.getTime() <= now.getTime()` both
+  compare against `NaN`; every comparison with `NaN` is false, so *both* clock checks were skipped
+  and an expired envelope verified as valid. This is reachable from the CLI:
+  `cob verify --now <anything>` does `new Date(String(values.now))`, so a typo in `--now` was a
+  silent verification downgrade rather than an error.
+- Regression test in `packages/core/test/envelope.test.js` pins the throw and the `checkEnvelope`
+  result (`valid: false`, `COB_VALIDATION`). It fails if the guard is removed: without it,
+  `verifyEnvelope` returns the expired envelope instead of throwing.
+- No spec edit: §4.3/§5 already require an expired envelope to be rejected, so the code was the
+  thing out of agreement. `CHANGELOG.md` records the tightened input, per Gate 8.
+
+**Gate results:** `node --check` clean on both changed files; `node --test` **170 pass / 0 fail**
+(169 before, so the new test is counted); `examples/two-agents/run.js` 19/19. As in the previous
+entry, the suite had to be run as `node --test --test-isolation=none`: the default runner spawns a
+child per file and the pass sandbox denies that pipe (`spawn EPERM`). Same files and assertions; CI
+runs the unmodified command, and the new test uses no child process.
+
+**Still broken / not done:**
+
+- **`verifyEnvelope`'s other time option is still unbounded.** `clockSkewMs` accepts any number, and
+  `Infinity` or `NaN` disables the future check exactly the way a bad `now` disabled both. Spec §5
+  says the skew **MUST NOT** exceed 5 minutes. Opened as issue #18 — deliberately not fixed here
+  (one increment).
+- **Payment time fields are not validated.** `validatePaymentRequest` accepts any string for
+  `validUntil` and `validatePaymentReceipt` any string for `settledAt`, though spec §8.2/§8.3
+  require RFC 3339 UTC instants. Opened as issue #19.
+- **The mainnet lock left two documents inconsistent with the code.** `packages/core/README.md`'s
+  "Design rules" still says "Mainnet requires an explicit policy opt-in", which the same file
+  contradicts twenty lines earlier; `docs/security.md` T10 says an operator permits unbounded
+  spending by setting `allowUnlimited: false`, but the flag is `true` when unlimited is allowed.
+  Not fixed here; not yet an issue either, so this entry is the record.
+- The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are
+  still claims (T11).
+- **`git push` still fails in this pass sandbox** (the credential helper's signal pipe is denied),
+  so the commit is local and the runner pushes after the pass returns — same as the 2026-09-30
+  entry.
+
+**Next:** issues #18 and #19 are both small and adjacent to this pass; then the Phase 1 items —
+the discovery document (#1) or the read-only reference registry (#2).
+
+---
+
 ## 2026-09-30 — Lock the mainnet opt-in, name unlimited spending
 
 **Attempted:** carry out operator directive D-1 (issue #7): make `allowMainnet: true` a refusal
