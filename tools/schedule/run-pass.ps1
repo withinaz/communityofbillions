@@ -155,6 +155,31 @@ function Get-PowerShellHost {
     return $null
 }
 
+function Invoke-AgentTask {
+    <#
+        Run one headless task, feeding the prompt through stdin, and return the exit code.
+
+        The prompt used to be passed as a command-line argument. That works right up until the
+        brief grows past 8191 characters - the command-line limit of cmd.exe, which is what a
+        .cmd shim in the npm prefix is. The brief is a document that will keep growing, so the
+        argument form was a trap with a timer on it: it worked for a week and then, on the day
+        the brief crossed the line, the pass failed with "The command line is too long."
+
+        `dsh headless -` reads the task from stdin, which has no such limit.
+    #>
+    param(
+        [Parameter(Mandatory)][string] $DshPath,
+        [Parameter(Mandatory)][string] $Prompt,
+        [Parameter(Mandatory)][string] $LogFile
+    )
+
+    $Prompt | & $DshPath headless - 2>&1 |
+        Tee-Object -FilePath $LogFile -Append |
+        ForEach-Object { Write-Host $_ }
+
+    return $LASTEXITCODE
+}
+
 function Test-Gates {
     <#
         The quality gates from agents/maintenance/CHECKS.md, applied to whatever is currently
@@ -676,8 +701,7 @@ file. Do not post anything: the runner posts for you, after validating what you 
 
     $agentExit = 0
     try {
-        & $DshPath headless ($header + $brief) 2>&1 | Tee-Object -FilePath $PassLog -Append | ForEach-Object { Write-Host $_ }
-        $agentExit = $LASTEXITCODE
+        $agentExit = Invoke-AgentTask -DshPath $DshPath -Prompt ($header + $brief) -LogFile $PassLog
     } catch {
         Write-Log "  the responder agent failed: $($_.Exception.Message)" 'WARN'
         $agentExit = 1
@@ -910,8 +934,7 @@ exactly one pass. When a decision is not yours to make, open an issue and stop.
     $started = Get-Date
     $agentExit = 0
     try {
-        & $dshPath headless $prompt 2>&1 | Tee-Object -FilePath $PassLog -Append | ForEach-Object { Write-Host $_ }
-        $agentExit = $LASTEXITCODE
+        $agentExit = Invoke-AgentTask -DshPath $dshPath -Prompt $prompt -LogFile $PassLog
     } catch {
         Write-Log "the agent invocation failed: $($_.Exception.Message)" 'ERROR'
         $agentExit = 1
