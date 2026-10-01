@@ -769,6 +769,36 @@ file. Do not post anything: the runner posts for you, after validating what you 
     return @{ status = 'ran'; replied = $replied }
 }
 
+# ---------------------------------------------------------------- last resort
+
+# An unattended pass must never die silently.
+#
+# The first properly scheduled run failed two seconds in and left four lines in its log and
+# nothing at all in result.txt: `git` had disappeared from PATH, the first command that needed it
+# threw, and the error went to a console nobody was watching. The directory listed in result.txt
+# is the operator's only summary, so an empty one is worse than a wrong one - it looks like the
+# pass simply never ran.
+#
+# Everything from here on is covered by this trap.
+trap {
+    $reason = $_.Exception.Message
+    try {
+        Write-Log ''
+        Write-Log 'UNHANDLED ERROR - the pass stopped here' 'ERROR'
+        Write-Log "  $reason" 'ERROR'
+        if ($_.ScriptStackTrace) { Write-Log "  $($_.ScriptStackTrace)" 'ERROR' }
+        Write-Log '  the lines above are the last steps that succeeded' 'ERROR'
+
+        # result.txt is read at a glance, so the verdict stays short; the full reason is in the
+        # pass log, which the verdict points at.
+        $short = if ($reason.Length -gt 90) { $reason.Substring(0, 87) + '...' } else { $reason }
+        Write-Result -Verdict "echec (erreur non geree : $short, voir le pass-log)"
+    } catch {
+        # Nothing useful left to do. The exit code still reports the failure.
+    }
+    exit 1
+}
+
 Write-Log "communityofbillions maintenance pass"
 Write-Log "repository : $RepoPath"
 Write-Log "log        : $PassLog"
@@ -780,6 +810,13 @@ Push-Location $RepoPath
 try {
     if (-not (Test-Path (Join-Path $RepoPath 'agents/maintenance/pass.md'))) {
         throw "maintenance brief not found at agents/maintenance/pass.md; is this the right repository?"
+    }
+
+    # Checked explicitly so that a missing tool produces a sentence rather than a stack trace.
+    foreach ($tool in 'git', 'node', 'gh') {
+        if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+            throw "$tool is not on PATH, and every pass needs it. The launcher repairs the usual Git locations; if this persists, fix PATH for the account the task runs as."
+        }
     }
 
     $dirtyBefore = git status --porcelain

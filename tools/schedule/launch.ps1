@@ -110,11 +110,48 @@ function Find-PowerShell7 {
     return $null
 }
 
+function Repair-EnvironmentForGit {
+    <#
+        Make sure `git` resolves, and repair the environment for every child process if it does not.
+
+        On this machine git was installed properly at C:\Program Files\Git\cmd, but the PATH entry
+        that made it reachable pointed at a bundled tool directory that was later removed. The
+        entry survived; the directory did not. The scheduled pass then died two seconds in, while
+        the task reported itself as having run, with the error going to a console nobody was
+        watching.
+
+        Anything the pass shells out to - git, gh, node - has to be reachable. Checking is cheap;
+        assuming is what produced a silent failure.
+    #>
+    if (Get-Command git -ErrorAction SilentlyContinue) { return $true }
+
+    $roots = @()
+    if ($env:ProgramFiles) { $roots += (Join-Path $env:ProgramFiles 'Git\cmd') }
+    if (${env:ProgramFiles(x86)}) { $roots += (Join-Path ${env:ProgramFiles(x86)} 'Git\cmd') }
+    if ($env:LOCALAPPDATA) { $roots += (Join-Path $env:LOCALAPPDATA 'Programs\Git\cmd') }
+
+    foreach ($directory in $roots) {
+        if (Test-Path -LiteralPath (Join-Path $directory 'git.exe')) {
+            # Prepended, so that everything downstream - including the agent the runner starts -
+            # inherits a PATH in which git actually works.
+            $env:PATH = "$directory;$env:PATH"
+            return $true
+        }
+    }
+
+    return $false
+}
+
 $pwsh = Find-PowerShell7
 
 if ($FindOnly) {
     if ($pwsh) { Write-Output $pwsh; exit 0 }
     exit 1
+}
+
+if (-not (Repair-EnvironmentForGit)) {
+    Write-Warning 'git was not found on PATH and could not be located in the usual places.'
+    Write-Warning 'The pass will report this and stop, rather than dying silently.'
 }
 
 if (-not (Test-Path -LiteralPath $RunnerPath)) {
