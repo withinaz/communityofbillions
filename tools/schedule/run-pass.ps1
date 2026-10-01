@@ -815,8 +815,17 @@ trap {
 
         # result.txt is read at a glance, so the verdict stays short; the full reason is in the
         # pass log, which the verdict points at.
-        $short = if ($reason.Length -gt 90) { $reason.Substring(0, 87) + '...' } else { $reason }
-        Write-Result -Verdict "echec (erreur non geree : $short, voir le pass-log)"
+        #
+        # And it is only written for a real pass. `-CheckGates`, `-CommentsOnly` and `-DryRun` are
+        # things a human runs at a keyboard; putting a verdict line in the operator's summary for
+        # one of those would be the log lying about what happened.
+        $isRealPass = -not ($CheckGates -or $CommentsOnly -or $DryRun)
+        if ($isRealPass) {
+            $short = if ($reason.Length -gt 90) { $reason.Substring(0, 87) + '...' } else { $reason }
+            Write-Result -Verdict "echec (erreur non geree : $short, voir le pass-log)"
+        } else {
+            Write-Log 'not a scheduled pass, so result.txt is left alone' 'WARN'
+        }
     } catch {
         # Nothing useful left to do. The exit code still reports the failure.
     }
