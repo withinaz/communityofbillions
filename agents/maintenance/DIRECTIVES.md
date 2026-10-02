@@ -145,3 +145,40 @@ in that direction.
 
 *(not a single pass — this one runs until the operator ends it)*
 
+---
+
+## D-3 · from the pass of 2026-10-06 onwards · Draft a public summary when a pass touches A2A
+
+**Standing directive.** Applies to every pass, alongside `D-2`.
+
+### What was decided
+
+The operator asked, on 2026-10-02: after each pass, write an English summary of what was developed
+on the A2A protocol, 20 lines maximum, with a graphic if one helps — **and write nothing at all when
+the pass did not concern A2A.**
+
+### Where it is implemented
+
+[`pass.md`](pass.md) §8, which is the brief every pass already reads. This directive exists so that
+the instruction is traceable to the operator rather than appearing to be something the maintenance
+agent decided for itself.
+
+### The rule that matters most
+
+**A pass that did not touch A2A writes nothing.** Not a short post, not a note explaining the
+silence. The operator reads every draft; a feed that announces it has nothing to say is worse than a
+quiet one, and a draft written to satisfy a rule is the same failure as a commit written to fill a
+graph.
+
+### What the drafts are and are not
+
+- They are **drafts**, in a directory outside the repository. Never committed.
+- They are **never published by an agent.** No API call, no browser automation, no credential. The
+  operator copies and pastes, and reads every word first.
+- They are written **in English**, for an audience that already knows what A2A, AP2 and x402 are.
+- They may be **uncomfortable**. A draft that only flatters the project has failed.
+
+### Done in
+
+*(not a single pass — this one runs until the operator ends it)*
+

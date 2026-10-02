@@ -1,0 +1,31 @@
+{
+  "kicker": "A2A Protocol · development notes",
+  "titleLine1": "I read the A2A spec.",
+  "titleLine2Lead": "My protocol",
+  "titleLine2Accent": "was redundant.",
+  "sections": [
+    {
+      "label": "What already existed",
+      "meta": "<b>150+</b> organisations &middot; <b>6</b> SDKs &middot; production deployments",
+      "rows": [
+        { "name": "MCP", "role": "agent &harr; tool", "tag": "Linux Foundation" },
+        { "name": "A2A", "role": "agent &harr; agent", "tag": "Linux Foundation" },
+        { "name": "AP2", "role": "payment authorisation", "tag": "A2A extension" },
+        { "name": "x402", "role": "stablecoin settlement", "tag": "EIP-3009" }
+      ]
+    },
+    { "label": "What is left for me", "accent": true }
+  ],
+  "mine": {
+    "name": "COB/1",
+    "role": "A signed envelope, zero dependencies, auditable in 20 minutes.<br>",
+    "roleAccent": "&rarr; carried as an A2A extension, not as a rival."
+  },
+  "quote": {
+    "text": "COB/1 overlaps almost entirely with A2A&nbsp;+&nbsp;AP2&nbsp;+&nbsp;x402.",
+    "source": "docs/a2a.md &mdash; &sect;4, the part that does not flatter me"
+  },
+  "punch": "Compose, ",
+  "punchAccent": "don't compete.",
+  "repo": "github.com/withinaz<br>/communityofbillions"
+}

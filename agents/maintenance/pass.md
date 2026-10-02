@@ -159,6 +159,54 @@ Append a single entry to the local maintenance log (the runner does this for you
 by hand, write it yourself). Keep it to a few lines: date, what changed, commit hash, whether the
 gates passed, anything the operator must act on.
 
+## 8. If — and only if — this pass touched A2A, draft the public summary
+
+The operator asked for this on 2026-10-02.
+
+**This step applies only when the increment came from the A2A track** — see directive `D-2` and
+[`DIRECTIVES.md`](DIRECTIVES.md). An entry appended to `docs/a2a.md` counts. So does a change to the
+canonicaliser that came out of comparing it with A2A, or a step towards the extension draft.
+
+**If this pass had nothing to do with A2A, write nothing here and move on.** Not a short post, not a
+"no news this week", not a comment saying you skipped it. Nothing at all. A feed that publishes to
+announce it has nothing to say is worse than a quiet one, and the operator has to read every draft
+you write.
+
+If it did concern A2A, write one file:
+
+```
+<drafts directory>/<yyyy-mm-dd>-<short-slug>.md
+```
+
+The drafts directory is given in the header at the top of this brief. It is **outside the
+repository** and must not be committed — these are personal posts, not project content.
+
+The file contains:
+
+1. **An English post, 20 lines maximum**, ready to copy and paste. Write it in the first person, for
+   an audience that already knows what A2A, AP2 and x402 are; do not explain them from scratch.
+2. **A one-line note saying what the pass actually did**, for the operator. The post is for
+   strangers; that line is for them.
+
+Rules for the post:
+
+- **One idea.** A post that makes two points makes neither.
+- **No hype.** No "game-changer", no "revolutionary", no emoji, no "excited to announce". The
+  project's voice is a competent maintainer who is short on time and does not waste the reader's.
+- **Nothing unverified.** Every factual claim must be checkable in this repository or traceable to
+  something the pass actually read. Cite it.
+- **No promises.** What was done, never what will be.
+- **Say the uncomfortable thing when there is one.** The first A2A post said the protocol was
+  redundant. That is precisely why it is worth reading. A draft that only flatters the project has
+  failed, and so has a pass that produces one.
+- **The graphic is optional.** If one genuinely helps, write a JSON spec and run:
+  `pwsh tools/linkedin/make-card.ps1 -Spec <spec.json> -Out <out.png>`
+  See [`tools/linkedin/README.md`](../../tools/linkedin/README.md). Most passes do not need one, and
+  a card that repeats the post in a box is worse than no card.
+
+**Do not publish anything.** There is no API call, no browser automation, and no credential for you
+to hold. The operator copies and pastes, and reads every word before doing so.
+
 ---
 
 ## Standing prohibitions

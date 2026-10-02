@@ -77,8 +77,17 @@ $RepliesFile = Join-Path $StateDir 'replies.json'
 
 $CommentBriefPath = Join-Path $RepoPath 'agents/comment-responder/brief.md'
 
+# Where a pass writes a LinkedIn draft when it touched the A2A track. Outside the repository on
+# purpose: these are the operator's personal posts, not project content.
+$DraftsDir = if ($env:COB_DRAFTS_DIR) {
+    $env:COB_DRAFTS_DIR
+} else {
+    Join-Path (Split-Path -Parent $LogDir) 'linkedin\queue'
+}
+
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
+New-Item -ItemType Directory -Force -Path $DraftsDir | Out-Null
 
 function Write-Log {
     param([string] $Message, [string] $Level = 'INFO')
@@ -917,6 +926,7 @@ SCHEDULED MAINTENANCE PASS
 Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss K')
 Repository: $RepoPath
 Log directory: $LogDir
+Drafts directory: $DraftsDir
 
 You are running unattended. There is no human to ask. Read the brief below and carry out
 exactly one pass. When a decision is not yours to make, open an issue and stop.
