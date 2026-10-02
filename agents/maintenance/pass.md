@@ -24,21 +24,41 @@ Read this whole brief before doing anything.
 
 ## 2. Choose exactly one increment
 
-**If a directive in `DIRECTIVES.md` names this pass, stop here — that is your increment.**
+**Every pass performs one real increment.** That is the expectation, not an aspiration. Four phases
+of this roadmap are unfinished, there are open issues, and the operator has asked for a track that
+has barely been started. There is no shortage of work, and a pass that lands nothing is the
+exception rather than an option.
+
+First: if a **dated** directive in `DIRECTIVES.md` names this pass, that is your increment. Do it and
+nothing else.
 
 Otherwise pick **one** of these, in this priority order:
 
 1. **A bug you can reproduce.** If an existing test is weak or wrong, fixing the test is the
    increment.
 2. **An open issue** in the current phase, preferably one labelled `good first issue`.
-3. **The next unstarted item** in the current phase of `ROADMAP.md`.
-4. **A documentation gap** — a question the current docs cannot answer.
-5. **Nothing.** If the repository is genuinely in a good state and you have no honest increment,
-   write a short `JOURNAL.md` entry saying so, push that, and stop. This is a legitimate pass and it
-   costs less than an invented one.
+3. **The A2A track** — directive `D-2`, laid out in [`../../docs/a2a.md`](../../docs/a2a.md) §7. This
+   is the operator's stated direction, so prefer it whenever there is a reasonable next step. It is
+   a preference, not a restriction: **it does not narrow what a pass may work on, and it is never a
+   reason for a pass to do nothing.**
+4. **The next unstarted item** in the current phase of `ROADMAP.md`.
+5. **A documentation or test gap** — a question the current docs cannot answer, a branch no test
+   covers, a tool whose README no longer matches the tool.
 
 **One increment. Not two.** If you find a second problem while working, open an issue for it. Do not
 fix it in this pass.
+
+### "Nothing to do" is an exception, and it needs an argument
+
+The escape exists for the pathological case where the repository is genuinely clean and everything
+above is either finished or blocked. With Phase 1 unfinished, that is not the situation.
+
+If you reach for it, say **specifically** why each of the five options above was unavailable — which
+issue is blocked on what, which roadmap item is not startable, which bug turned out not to be one.
+"Nothing came to mind" is not a reason. Neither is "the only work left is A2A and I found none":
+look at items 1, 2, 4 and 5 before concluding that.
+
+A pass that writes "nothing to do" without that argument has failed, and `JOURNAL.md` will show it.
 
 ### If the increment needs a decision you cannot make
 
@@ -80,13 +100,17 @@ So aim for the increment a reviewer can understand in five minutes:
   the code, an error message that does not say what went wrong, a roadmap item, an open issue, a
   failing edge case. Look for the smallest one that is real.
 
-**But there is no requirement to commit anything.** If a pass honestly finds nothing worth doing, it
-records that in `JOURNAL.md` and stops. That is a valid pass, and it costs less than an invented
-one. Manufactured work does not merely waste a commit — it devalues every other commit in the
-history, because a reader can no longer tell which ones meant something. Never pad.
+**But never pad.** The requirement is one honest increment, never one commit. If every option in §2
+really were finished or blocked — and with four phases unfinished, that is not the situation you are
+in — the right pass is a short `JOURNAL.md` entry naming *which* things were blocked and *why*, and
+no commit beyond that. §2 sets out what that argument has to contain.
 
-The repository's activity is a *consequence* of work. It is never the objective, and a week with no
-commit is better than a week with three empty ones.
+Manufactured work does not merely waste a commit: it devalues every other commit in the history,
+because a reader can no longer tell which ones meant something. Never pad.
+
+The repository's activity is a *consequence* of work, never the objective. But that is not a licence
+to idle either. The difference between the two is simple: **a good pass can name what it did, and a
+padded one cannot.**
 
 ## 4. Quality gates — all must pass before you commit
 
@@ -171,6 +195,16 @@ canonicaliser that came out of comparing it with A2A, or a step towards the exte
 "no news this week", not a comment saying you skipped it. Nothing at all. A feed that publishes to
 announce it has nothing to say is worse than a quiet one, and the operator has to read every draft
 you write.
+
+> **This rule is about the draft, and only the draft.**
+>
+> It says nothing about what a pass may work on, and it is never a reason to do less. A pass spent
+> on the replay cache, on a bug, or on a document that drifted still performed the increment that
+> §2 requires — it simply does not produce a post.
+>
+> Never let this section become "there was no A2A work, so there was nothing to do". The two rules
+> are independent: **one real increment every pass**, and **a draft only when that increment was
+> A2A**.
 
 If it did concern A2A, write one file:
 

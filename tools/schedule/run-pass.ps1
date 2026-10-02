@@ -1031,7 +1031,10 @@ exactly one pass. When a decision is not yours to make, open an issue and stop.
     } elseif ($dirty -and -not $leftoverCommitted) {
         'echec (les portes echouent, arbre laisse en place)'
     } elseif ($finalHead -eq $headBeforeAgent) {
-        'ok (rien a faire)'
+        # The runner only knows that HEAD did not move. It does not know why, and naming a reason
+        # it cannot see would be the log asserting something it did not observe. The reason is in
+        # JOURNAL.md, where the agent has to argue for it.
+        'ok (aucun commit)'
     } else {
         'ok'
     }

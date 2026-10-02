@@ -109,6 +109,18 @@ today because with mainnet locked, "unlimited" can only ever mean testnet play m
 **Standing directive.** Not a single pass; it applies to every pass from the date below until the
 operator says otherwise.
 
+> **Clarified by the operator on 2026-10-02.** The preference for A2A work is a *preference*. It
+> does **not** narrow what a pass may work on, and it is **never** a reason for a pass to do
+> nothing.
+>
+> Every pass performs one real increment — see [`pass.md`](pass.md) §2 — whether or not that
+> increment has anything to do with A2A. The A2A track is simply where to look first when there is
+> a reasonable next step. If there is not, work on a bug, an open issue, the current roadmap phase,
+> or a documentation gap, and carry on.
+>
+> The operator's "write nothing" rule concerns **only the LinkedIn draft** in `D-3`, not the pass.
+> Conflating the two would turn a publishing rule into an excuse for an idle pass.
+
 ### What was decided
 
 The operator asked, on 2026-10-01, that the project engage with **A2A**, the Agent2Agent protocol —
