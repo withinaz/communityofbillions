@@ -129,11 +129,13 @@ in that direction.
 
 ### What this means for a pass
 
-1. **The increment comes from the A2A track**, whenever there is a reasonable one available. The
-   track is laid out in [`docs/a2a.md`](../../docs/a2a.md) §7, in rough dependency order.
-2. **Append a dated entry to §9 of `docs/a2a.md`**, whatever the pass did. Say what was read, what
-   was decided, and what changed — or say plainly that nothing changed and why. The newest entry
-   goes last.
+1. **Prefer the A2A track** when there is a reasonable next step in it — it is the operator's stated
+   direction, and the track is laid out in [`docs/a2a.md`](../../docs/a2a.md) §7 in rough dependency
+   order. When there is not, take the next item from [`pass.md`](pass.md) §2 instead and carry on.
+2. **Append a dated entry to §9 of `docs/a2a.md`** whenever the pass spent time on the track. Say
+   what was read, what was decided, and what changed — or say plainly that nothing changed and why.
+   The newest entry goes last. A pass that never went near A2A has nothing to append, and must not
+   invent an entry to look diligent.
 3. **Reading counts as an increment** when it is the honest next step. A pass that reads the AP2
    specification and writes down what it found has done real work; a pass that skips the reading and
    writes plausible-sounding prose about it has not.
@@ -166,8 +168,8 @@ in that direction.
 ### What was decided
 
 The operator asked, on 2026-10-02: after each pass, write an English summary of what was developed
-on the A2A protocol, 20 lines maximum, with a graphic if one helps — **and write nothing at all when
-the pass did not concern A2A.**
+on the A2A protocol, 20 lines maximum, with a graphic if one helps — **and produce no note at all
+for a pass that did not concern A2A.**
 
 ### Where it is implemented
 
@@ -177,10 +179,22 @@ agent decided for itself.
 
 ### The rule that matters most
 
-**A pass that did not touch A2A writes nothing.** Not a short post, not a note explaining the
+**A pass that did not touch A2A produces no draft.** Not a short post, not a note explaining the
 silence. The operator reads every draft; a feed that announces it has nothing to say is worse than a
 quiet one, and a draft written to satisfy a rule is the same failure as a commit written to fill a
 graph.
+
+> **This rule constrains the note. It does not constrain the pass.**
+>
+> A pass whose increment had nothing to do with A2A still performs one real increment — see
+> [`pass.md`](pass.md) §2 — and simply has no draft to show for it. The two rules are independent:
+>
+> | | Applies to | Rule |
+> | --- | --- | --- |
+> | `pass.md` §2 | the pass | one real increment, **every** pass, A2A or not |
+> | `pass.md` §8, this directive | the note | a draft **only** when that increment was A2A |
+>
+> Nothing in this directive is ever a reason for a pass to do less work.
 
 ### What the drafts are and are not
 

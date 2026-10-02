@@ -191,10 +191,10 @@ The operator asked for this on 2026-10-02.
 [`DIRECTIVES.md`](DIRECTIVES.md). An entry appended to `docs/a2a.md` counts. So does a change to the
 canonicaliser that came out of comparing it with A2A, or a step towards the extension draft.
 
-**If this pass had nothing to do with A2A, write nothing here and move on.** Not a short post, not a
-"no news this week", not a comment saying you skipped it. Nothing at all. A feed that publishes to
-announce it has nothing to say is worse than a quiet one, and the operator has to read every draft
-you write.
+**If this pass had nothing to do with A2A, write nothing in this section and move on.** Not a short
+post, not a "no news this week", not a comment saying you skipped it. Nothing at all. A feed that
+publishes to announce it has nothing to say is worse than a quiet one, and the operator has to read
+every draft you write.
 
 > **This rule is about the draft, and only the draft.**
 >
