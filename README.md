@@ -135,6 +135,22 @@ examples/        Runnable two-agent scenarios
 JOURNAL.md       Public, append-only log of what changed and why
 ```
 
+## How this relates to A2A, AP2 and x402
+
+[A2A](https://a2a-protocol.org/latest/) — the Agent2Agent protocol, originally from Google and now
+under the Linux Foundation — already answers agent discovery and agent-to-agent messaging. **AP2**
+answers payment authorisation. **x402** answers stablecoin settlement. Between them they cover most
+of what this project originally set out to do.
+
+That is uncomfortable, and it is worth saying plainly rather than implying that `COB/1` is a
+replacement for anything. The working assumption is now **composition, not competition**: keep the
+zero-dependency, auditable core — canonical JSON, an allow-listed signed set, a mainnet gate that is
+a `throw` rather than a paragraph of advice — and carry it as an A2A extension instead of as a rival
+standard.
+
+The full reasoning, including the parts that do not flatter the project, is in
+[docs/a2a.md](docs/a2a.md).
+
 ## How this project is maintained
 
 This repository is kept alive by an automated maintenance agent that performs small, real increments

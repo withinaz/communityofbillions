@@ -101,3 +101,47 @@ today because with mainnet locked, "unlimited" can only ever mean testnet play m
 ### Done in
 
 **Done in:** 3e5db76
+
+---
+
+## D-2 · from the pass of 2026-10-06 onwards · Work the A2A track
+
+**Standing directive.** Not a single pass; it applies to every pass from the date below until the
+operator says otherwise.
+
+### What was decided
+
+The operator asked, on 2026-10-01, that the project engage with **A2A**, the Agent2Agent protocol —
+<https://a2a-protocol.org/latest/> — by adding development notes about it, and by developing the code
+in that direction.
+
+### What this means for a pass
+
+1. **The increment comes from the A2A track**, whenever there is a reasonable one available. The
+   track is laid out in [`docs/a2a.md`](../../docs/a2a.md) §7, in rough dependency order.
+2. **Append a dated entry to §9 of `docs/a2a.md`**, whatever the pass did. Say what was read, what
+   was decided, and what changed — or say plainly that nothing changed and why. The newest entry
+   goes last.
+3. **Reading counts as an increment** when it is the honest next step. A pass that reads the AP2
+   specification and writes down what it found has done real work; a pass that skips the reading and
+   writes plausible-sounding prose about it has not.
+4. **A real bug or a failing gate still takes priority.** Fix it, record it, and say in the A2A note
+   that this pass was spent elsewhere.
+
+### Rules that do not bend
+
+- **Do not invent what the other protocols say.** `docs/a2a.md` marks clearly what has been read
+  first-hand and what comes from second-hand sources. Keep that discipline. If a claim about AP2 or
+  x402 has not been verified against their own specification, say so in the note.
+- **Do not let the notes become marketing.** §4 of `docs/a2a.md` records that COB/1 overlaps almost
+  entirely with A2A + AP2 + x402. That is uncomfortable and it stays. A pass that quietly softens it
+  has failed, no matter how good the diff looks.
+- **Do not rewrite the repository in one pass.** Option B in §6 (compose with A2A rather than compete)
+  is a year of increments, and the brief's rule about one small increment per pass applies here more
+  than anywhere.
+- **Do not amend this directive.**
+
+### Done in
+
+*(not a single pass — this one runs until the operator ends it)*
+

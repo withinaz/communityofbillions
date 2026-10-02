@@ -62,6 +62,29 @@ Goal: agents can do business without trusting each other.
 
 ---
 
+## Interoperability track — A2A 🚧
+
+Added on 2026-10-01, by operator request. This track runs alongside the phases above rather than
+after them, and from the pass of 2026-10-06 it is where most passes draw their increment from.
+
+Background and reasoning: [docs/a2a.md](docs/a2a.md). The short version is that
+[A2A](https://a2a-protocol.org/latest/) already answers discovery and agent-to-agent messaging, and
+AP2 and x402 largely answer payment authorisation and stablecoin settlement — so **COB/1 has to
+decide whether it composes with them or competes with them.** The notes argue for composing, and
+record the uncomfortable parts rather than smoothing them over.
+
+- 🚧 Read AP2 and x402 properly, and replace the second-hand notes — [#21](https://github.com/withinaz/communityofbillions/issues/21)
+- 🗓 Compare `canonical.js` with A2A's Agent Card canonicalisation requirement — [#22](https://github.com/withinaz/communityofbillions/issues/22)
+- 🗓 Draft `cob.a2a`: the envelope as an A2A extension — [#23](https://github.com/withinaz/communityofbillions/issues/23)
+- 🗓 Decide whether `.well-known/cob.json` becomes an Agent Card — [#24](https://github.com/withinaz/communityofbillions/issues/24)
+- 🗓 Decide the relationship to x402 for settlement — [#25](https://github.com/withinaz/communityofbillions/issues/25)
+- 🗓 **Operator decision:** compose or compete — [#20](https://github.com/withinaz/communityofbillions/issues/20)
+
+The rest of this roadmap is unchanged by the track. Phase 1 remains worth finishing: a replay cache
+and conformance vectors are useful whatever the envelope ends up riding on.
+
+---
+
 ## Explicitly out of scope
 
 - A hosted, closed service. This is a protocol.
