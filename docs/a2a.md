@@ -87,33 +87,71 @@ And, critically: **A2A does not handle payments.** It is a communication protoco
 
 ## 3. The payment layer: AP2 and x402
 
-A2A does not settle anything. Two things sit next to it:
+A2A does not settle anything. Two things sit next to it.
 
-**AP2 — Agent Payments Protocol.** An **A2A extension** for payment *authorisation*. It chains three
-cryptographically signed mandates:
+### AP2 — Agent Payments Protocol
 
-- an **Intent Mandate** (the user delegates authority),
-- a **Cart Mandate** (the user approves a specific cart at a specific price),
-- a **Payment Mandate** (a derived credential the network sees).
+**Read first-hand on 2026-10-06**, from the v0.2 specification and its sub-documents in
+`google-agentic-commerce/AP2` (`docs/ap2/specification.md`, `agent_authorization.md`,
+`checkout_mandate.md`, `payment_mandate.md`, plus the repository `README.md` and `mkdocs.yml`).
+Everything in this subsection is traceable to those files.
 
-It is payment-method agnostic, built on W3C Verifiable Credentials, and designed to produce
-non-repudiable evidence for disputes.
+- **Two mandate types, not three.** The earlier Intent / Cart / Payment description in this file
+  came from the launch announcement and is out of date. AP2 v0.2 defines a **Checkout Mandate**
+  (`vct` `mandate.checkout.1`, open `mandate.checkout.open.1`) and a **Payment Mandate**
+  (`mandate.payment.1`, open `mandate.payment.open.1`). Each mandate type versions its schema in the
+  numeric suffix of `vct`, and implementations **MUST** match the exact string.
+- **They are SD-JWTs** (RFC 9901), i.e. Verifiable Digital Credentials, not W3C VCs specifically;
+  the specification says other VDC formats such as ISO mDocs *could* be substituted.
+- **Open and closed.** An open mandate carries `constraints` and a `cnf` proof-of-possession key; a
+  closed mandate is bound to one transaction by a key-binding JWT signed with the key the open
+  mandate endorsed. Verifiers always receive a closed mandate; in Autonomous mode they receive the
+  open mandate alongside it and **MUST** evaluate every constraint, treating an unknown constraint
+  as a failure.
+- **Five roles:** Shopping Agent, Credential Provider, Merchant, Merchant Payment Processor, and
+  Trusted Surface. The Trusted Surface **MUST** be non-agentic; the Shopping Agent is expected to be
+  agentic, which is the threat AP2 is built around.
+- **Delegation** is either an OpenID4VP presentation of a User Credential (`transaction_data` with
+  `type: "delegate"`) or a Trusted Agent Provider that holds a signing key the agent cannot reach.
+- **Receipts are verifier-signed JWTs** carrying `iss`, a `result` of `success` or `error`, and a
+  `reference` that is the base64url hash of the mandate received (the `sd_hash` construction). The
+  Checkout Receipt and Payment Receipt together are the evidence for a dispute.
+- **What it is not:** AP2 calls itself a "security feature within a Commerce Protocol". The commerce
+  protocol — catalogue, checkout, the APIs between the roles — is explicitly out of scope, and AP2
+  is designed to be compatible with the Universal Commerce Protocol (UCP). It authorises; it does
+  not move money and names no settlement rail.
+- **Two corrections to what this file used to say.** (a) AP2 v0.2 does not present itself as an A2A
+  extension: it says it is part of an ecosystem that includes A2A and MCP, and the A2A tie is
+  visible in the repository's samples (`code/samples/.../scenarios/a2a/...`) rather than in the
+  specification text. The earlier claim is downgraded to **unverified**. (b) The mandate model is
+  the one above, not Intent / Cart / Payment.
 
-**x402.** A payment *execution* protocol, HTTP-native, using stablecoins. It relies on **EIP-3009**
-(`transferWithAuthorization`) for gasless USDC transfers and **Permit2** for other ERC-20 tokens.
-Google published an official **A2A x402 extension**.
+**The finding that matters to us.** The specification requires the merchant-signed Checkout JWT to
+use a **non-deterministic** signature scheme — "e.g., ECDSA" — and explicitly **not** a
+deterministic one, naming **Ed25519**, because the Checkout JWT's hash is published and a
+deterministic signature would let an observer test candidate payloads against that hash. COB/1 is
+Ed25519 throughout. Any future "COB/1 as an AP2 profile" has to confront that; it is not a detail
+that can be waved through.
 
-The composition their documentation describes: an agent uses **A2A** to find and talk to another
-agent, **AP2** to authorise the payment, and **x402** to settle it.
+### x402 — still second-hand
 
-Sources: [Announcing AP2](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol),
-[AP2 specification](https://github.com/google-agentic-commerce/AP2/blob/main/docs/ap2/specification.md),
+**x402.** A payment *execution* protocol, HTTP-native, using stablecoins. The material read so far
+says it relies on **EIP-3009** (`transferWithAuthorization`) for gasless USDC transfers and
+**Permit2** for other ERC-20 tokens, and that Google published an official **A2A x402 extension**.
+
+> **Not yet read.** These x402 lines still come from announcement material and secondary write-ups,
+> not from the x402 specification. Treat every specific claim here as an assumption. Reading it, and
+> the A2A x402 extension, is the remaining half of issue
+> [#21](https://github.com/withinaz/communityofbillions/issues/21).
+
+The composition the secondary material describes, and the one AP2's own role description is
+consistent with: an agent uses **A2A** to find and talk to another agent, **AP2** to authorise the
+payment, and **x402** to settle it. The AP2 end of that is now verified; the x402 end is not.
+
+Sources: [AP2 specification](https://github.com/google-agentic-commerce/AP2/blob/main/docs/ap2/specification.md),
+[Announcing AP2](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol),
 [Coinbase on AP2 + x402](https://www.coinbase.com/developer-platform/discover/launches/google_x402),
 [x402 explained](https://eco.com/support/en/articles/12328618-x402-protocol-explained-how-ai-agents-pay-onchain).
-
-> **Not yet read.** These AP2 and x402 notes come from announcement material and secondary write-ups,
-> not from the AP2 specification itself. Anything below that depends on their detail is marked as an
-> assumption. Reading them properly is a pass of its own.
 
 ---
 
@@ -193,7 +231,8 @@ This is an operator decision, not a maintenance-pass one. Issue
 In rough dependency order. Each is a pass, not a day's work crammed into one a pass.
 
 1. **Read the AP2 specification and the x402 extension properly**, replacing the second-hand notes in
-   §3 with things actually verified.
+   §3 with things actually verified. *AP2 was read on 2026-10-06 and §3 rewritten from it; x402 and
+   the A2A x402 extension are still unread.*
 2. **Compare canonicalisation.** Check `canonical.js` against A2A's stated requirement for Agent Card
    signing, and write the comparison down. Either we match, or we have found a real gap in one of us.
 3. **Draft `cob.a2a` as an A2A extension**: URI, `AgentExtension` declaration, where COB/1 data lives
@@ -211,8 +250,14 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
 
 - Is COB/1's envelope still worth keeping once A2A's extension model can carry it? *Probably yes, as
   the canonical-and-signed payload — but the honest answer is "keep it, and find out by using it".*
-- Does AP2's mandate model subsume what `cob.payment.request` and `cob.payment.receipt` do? If it
-  does, our payment messages should become an AP2 profile, not a parallel design.
+- Does AP2's mandate model subsume what `cob.payment.request` and `cob.payment.receipt` do? *On the
+  AP2 reading of 2026-10-06: **no**, but the answer is provisional until x402 is read.* AP2
+  authorises a payment and produces evidence of a user's delegation; it has no invoice addressed
+  from one agent to another, no payer/payee identity of the COB/1 kind, and no settlement. Its
+  Payment Receipt is a verifier's statement about a mandate — the Credential Provider, Network or
+  Merchant Payment Processor — not the payee's claim that a transfer happened. It does, however,
+  occupy the same slot in an A2A + AP2 + x402 stack that our payment messages occupy, so the
+  overlap is real even though the models are not interchangeable.
 - A2A says extensions must not change core structures. A settlement extension that wants to add task
   **states** may be pushing against that. Worth checking before designing one.
 - What does "settled" mean when the settlement rail is x402 and the evidence is an on-chain
@@ -233,3 +278,24 @@ first artefact of the track. The conclusion that mattered was uncomfortable and 
 §4 rather than softened.
 
 Next: read the AP2 specification properly (§7.1).
+
+### 2026-10-06 — AP2 read first-hand; the notes were wrong
+
+**Read:** AP2 at `google-agentic-commerce/AP2`, `main` — `docs/ap2/specification.md` (v0.2),
+`agent_authorization.md`, `checkout_mandate.md`, `payment_mandate.md`, plus `README.md` and
+`mkdocs.yml`. Nothing was read second-hand for this entry.
+
+**Changed:** §3 rewritten from the specification. The Intent / Cart / Payment model this file had
+been repeating came from the launch announcement and is wrong for v0.2: AP2 defines two mandates,
+Checkout and Payment, each with open and closed states, carried as SD-JWTs with `vct` version
+suffixes. The claim that AP2 *is* an A2A extension is not in the specification and is now marked
+unverified. The answer to issue #21's question is written into §8: AP2 does not subsume
+`cob.payment.request` / `cob.payment.receipt`, though it sits in the same layer.
+
+**The uncomfortable finding, recorded in §3 rather than smoothed over:** AP2 requires the
+merchant-signed Checkout JWT to use a non-deterministic signature scheme and explicitly rules out
+**Ed25519**, which is the only signature scheme COB/1 has. A "COB/1 as an AP2 profile" is therefore
+not a rename; it would force a decision about the identity layer.
+
+**Not done:** x402 and the A2A x402 extension are still second-hand and still marked as such in §3.
+Reading them is the rest of issue #21.

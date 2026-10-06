@@ -70,6 +70,15 @@ documented specification revision.
   installation directory of the interpreter currently running (`$PSHOME`), for the same alias
   reason.
 
+### Documentation
+
+- **`docs/a2a.md` §3 now describes AP2 from its own specification** (v0.2), read first-hand on
+  2026-10-06. Two claims it previously carried from launch material were wrong: AP2 has two mandates
+  (Checkout and Payment, each open or closed, carried as SD-JWTs), not Intent / Cart / Payment, and
+  the specification does not present AP2 as an A2A extension. The notes also record that AP2
+  requires the merchant-signed Checkout JWT to use a non-deterministic signature scheme and
+  explicitly excludes Ed25519, which COB/1 uses. The x402 half of §3 remains marked second-hand.
+
 ## [0.1.0] — 2026-09-28
 
 First draft. Everything below is new.

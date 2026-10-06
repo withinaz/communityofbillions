@@ -11,6 +11,65 @@ Rules for this file:
 
 ---
 
+## 2026-10-06 — AP2 read first-hand, and the notes it replaces were wrong
+
+**Attempted:** one increment, chosen by the priority order in the brief. `good first issue` #21
+("read the AP2 specification and replace the second-hand notes") is the first item of the A2A track,
+which directive D-2 says to prefer, so the pass read AP2 from its own specification and rewrote §3 of
+`docs/a2a.md`. Nothing else was attempted.
+
+**Landed:**
+
+- `docs/a2a.md` §3 rewritten from AP2 **v0.2**, read in `google-agentic-commerce/AP2`:
+  `docs/ap2/specification.md`, `agent_authorization.md`, `checkout_mandate.md`, `payment_mandate.md`,
+  plus `README.md` and `mkdocs.yml`. Nothing in the new §3 is second-hand.
+- Two corrections, both stated in the file:
+  - The three-mandate model this repository had been repeating (**Intent / Cart / Payment**) came
+    from the launch announcement. v0.2 defines **two** mandates — Checkout (`mandate.checkout.1`) and
+    Payment (`mandate.payment.1`) — each with **open** and **closed** states, carried as **SD-JWTs**
+    (RFC 9901) with the schema version in the `vct` suffix.
+  - This file said AP2 **is an A2A extension**. The v0.2 specification does not say that; it calls
+    itself a security feature within a Commerce Protocol and places itself in an ecosystem that
+    *includes* A2A and MCP. The claim is now marked unverified, and the A2A tie is located where it
+    actually is — the samples under `code/samples/.../scenarios/a2a/...`.
+- Issue #21's question — does AP2's mandate model subsume `cob.payment.request` and
+  `cob.payment.receipt` — is answered in §8: **no**, because AP2 authorises and produces delegation
+  evidence, while our messages are an invoice between two identified agents and a payee-signed claim
+  of settlement; AP2's Payment Receipt is a verifier-signed statement about a mandate. The answer is
+  marked provisional until x402 is read.
+- **The uncomfortable finding, recorded in §3:** AP2 requires the merchant-signed Checkout JWT to use
+  a non-deterministic signature scheme ("e.g., ECDSA") and explicitly rules out deterministic ones,
+  naming **Ed25519** — which is the only signature scheme COB/1 has. "COB/1 as an AP2 profile" would
+  force a decision about the identity layer; the notes say so instead of implying the move is cheap.
+- §7.1 now reads "AP2 read, x402 not"; §3 keeps the x402 half behind an explicit *Not yet read*
+  caveat; §9 has the dated entry D-2 requires.
+
+**Gate results:** Gate 1 has nothing to check — the diff touches only `docs/a2a.md`, `JOURNAL.md`,
+and `CHANGELOG.md`, no `.js`. Gate 2 **170 pass / 0 fail**; Gate 3 `examples/two-agents/run.js`
+**19/19 expectations held**; Gate 4 runner tests **40/40 assertions passed**. As in the previous two
+entries, Gate 2's written command (`node --test "packages/core/**/*.test.js"`) cannot run in this
+sandbox because the default runner spawns a child per file and the pipe is denied (`spawn EPERM`);
+it was run as `node --test --test-isolation=none`, the same files and assertions. CI runs the
+unmodified command.
+
+**Still broken / not done:**
+
+- **x402 is still second-hand.** §3 says so explicitly now, with the specific claims that depend on
+  that reading. Reading it and the A2A x402 extension is the rest of issue #21, which stays open.
+- The Ed25519 conflict recorded above is a finding, not a fix. It is not yet an issue; §8 holds it.
+- The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are still
+  claims (T11), and issues #18/#19 from the 2026-10-01 pass remain open.
+- **`git pull --rebase` fails in this pass sandbox** (`schannel: AcquireCredentialsHandle failed:
+  SEC_E_NO_CREDENTIALS`), so the branch state was not confirmed against the remote; `git push` will
+  likewise be left to the runner, as in earlier passes. The working tree was clean when the pass
+  began and only the three files above are modified.
+
+**Next:** finish issue #21 — read x402 and the A2A x402 extension, and replace the last second-hand
+paragraph in §3. After that, §7.2 (compare `canonical.js` with A2A's Agent Card canonicalisation) is
+the next A2A step and needs no network reading.
+
+---
+
 ## 2026-10-01 — A bad `now` no longer skips the expiry check
 
 **Attempted:** one increment, chosen by the priority order in the brief. The `good first issue`s in
