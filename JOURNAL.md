@@ -59,6 +59,13 @@ unmodified command.
 - The Ed25519 conflict recorded above is a finding, not a fix. It is not yet an issue; §8 holds it.
 - The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are still
   claims (T11), and issues #18/#19 from the 2026-10-01 pass remain open.
+- **The A2A draft required by directive D-3 could not be saved.** This pass did touch A2A, so
+  `pass.md` §8 applies and a draft is owed. The queue is
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`, which is outside this pass's
+  file sandbox; the one-shot escalation needs an approval channel, and an unattended pass has none,
+  so the write failed closed. The draft was written but could not be saved, and it is deliberately
+  not reproduced here — the brief says these are personal posts and must not be committed. Opened as
+  issue #26, with the three possible fixes, because it will recur on every A2A pass.
 - **`git pull --rebase` fails in this pass sandbox** (`schannel: AcquireCredentialsHandle failed:
   SEC_E_NO_CREDENTIALS`), so the branch state was not confirmed against the remote; `git push` will
   likewise be left to the runner, as in earlier passes. The working tree was clean when the pass
