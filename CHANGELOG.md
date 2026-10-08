@@ -77,7 +77,16 @@ documented specification revision.
   (Checkout and Payment, each open or closed, carried as SD-JWTs), not Intent / Cart / Payment, and
   the specification does not present AP2 as an A2A extension. The notes also record that AP2
   requires the merchant-signed Checkout JWT to use a non-deterministic signature scheme and
-  explicitly excludes Ed25519, which COB/1 uses. The x402 half of §3 remains marked second-hand.
+  explicitly excludes Ed25519, which COB/1 uses. (The x402 half of §3 was still second-hand at that
+  point; the next entry replaces it.)
+- **`docs/a2a.md` §3 now describes x402 from its own specification** (v2) and the A2A x402 extension
+  (v0.1), read first-hand on 2026-10-08. The second-hand caveat is gone. The notes record that x402's
+  `exact` scheme uses EIP-3009 (with Permit2 as the ERC-20 fallback, and ERC-7710 for smart
+  accounts), that its `SettlementResponse` names an on-chain transaction hash while still being
+  produced by the facilitator, and that its EIP-712/secp256k1 signatures do not compose with COB/1's
+  Ed25519 identity. Two discrepancies in the other specifications are recorded: the A2A x402
+  extension's examples still use x402 v1 field names, and it names the activation header
+  `X-A2A-Extensions` where A2A's own documentation says `A2A-Extensions`.
 
 ## [0.1.0] — 2026-09-28
 

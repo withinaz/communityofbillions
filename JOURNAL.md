@@ -11,6 +11,69 @@ Rules for this file:
 
 ---
 
+## 2026-10-08 — x402 read first-hand; the A2A notes have no second-hand claims left
+
+**Attempted:** one increment, chosen by the priority order in the brief. No dated directive names
+this pass. Issue #21 (A2A track, `good first issue`) had AP2 read on 2026-10-06 with x402 still
+second-hand; finishing it is the first item of the A2A track, which directive D-2 says to prefer. The
+pass read x402 and the A2A x402 extension from their own specifications and rewrote the x402 half of
+`docs/a2a.md` §3. Nothing else was attempted.
+
+**Landed:**
+
+- §3's x402 subsection rewritten from `coinbase/x402` `main` — `specs/x402-specification-v2.md`,
+  `specs/schemes/exact/scheme_exact_evm.md`, `README.md` — and from `google-agentic-commerce/a2a-x402`
+  `spec/v0.1/spec.md` and its `README.md`, plus A2A's own extensions documentation for the activation
+  header. Nothing in the new §3 is second-hand.
+- The three claims the old second-hand paragraph carried are now settled: EIP-3009 is the recommended
+  EVM transfer method and Permit2 the universal ERC-20 fallback (ERC-7710 also listed); the A2A x402
+  extension is real, with URI `https://github.com/google-a2a/a2a-x402/v0.1` and its payment state in
+  `Message.metadata` rather than in new task states; and "A2A to talk, AP2 to authorise, x402 to
+  settle" is consistent with both specifications.
+- §7.1 marked done, §8's provisional answers updated, and the dated §9 entry added, per D-2.
+- Issue #21 closes with this pass: both halves of its reading are complete.
+
+**Findings recorded rather than smoothed over (in §3 and the §9 entry):** x402's identity is
+EIP-712/secp256k1 and does not compose with COB/1's Ed25519 — an x402 payload would ride inside a
+COB/1 envelope as opaque data, with two signature domains; the A2A x402 extension is at v0.1 and
+still shows x402 v1 field names while core x402 is v2; the extension says the activation header is
+`X-A2A-Extensions` and A2A's own docs say `A2A-Extensions`; and x402 narrows T11 rather than closing
+it, because the settlement response that names the transaction is itself produced by the
+facilitator.
+
+**Gate results:** Gate 1 has nothing to check — the diff touches only `docs/a2a.md`, `JOURNAL.md`,
+and `CHANGELOG.md`, no `.js`. Gate 2 **170 pass / 0 fail**; Gate 3 `examples/two-agents/run.js`
+**19/19 expectations held**. As in the last three entries, Gate 2's written command
+(`node --test "packages/core/**/*.test.js"`) cannot run in this sandbox because the default runner
+spawns a child per file and the pipe is denied (`spawn EPERM`); it was run as
+`node --test --test-isolation=none`, the same files and assertions. CI runs the unmodified command.
+
+**Still broken / not done:**
+
+- **The A2A draft required by directive D-3 could not be saved**, for the same reason as the
+  2026-10-06 pass: the queue is outside this pass's file sandbox. This pass did touch A2A, so a draft
+  is owed; the write was attempted and refused, and the draft is deliberately not reproduced here.
+  Issue #26 already records the three possible fixes and this pass adds nothing to it.
+- **`git pull --rebase` fails in this pass sandbox** (`schannel: AcquireCredentialsHandle failed:
+  SEC_E_NO_CREDENTIALS`), so the branch was not confirmed against the remote; the working tree was
+  clean when the pass began. `git push` is left to the runner, as in earlier passes.
+- The decision this reading feeds — implement x402, interop with it, or document why neither — is
+  issue #25 and is not this pass's call. The A2A steps after §7.1 (#22 canonicalisation, #23
+  `cob.a2a`, #24 Agent Card) are unstarted.
+- The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are still
+  claims (T11), and issues #18/#19 remain open. The roadmap item for #21 stays 🚧: the roadmap
+  reserves ✅ for test-covered work and a reading task has no test to cover it.
+- **The project board item for #21 is `Done`.** The first `gh project item-list` call, without
+  `--owner`, refused to run non-interactively; re-run as `gh project item-list 2 --owner withinaz`,
+  the item already shows status `Done` — GitHub moved it when the issue closed — so no board write
+  was needed. The earlier version of this bullet said the board was unavailable; that was wrong, and
+  the correction is here.
+
+**Next:** §7.2 / issue #22 — compare `canonical.js` with A2A's Agent Card canonicalisation
+requirement. It needs no network reading and is the next step in dependency order.
+
+---
+
 ## 2026-10-06 — AP2 read first-hand, and the notes it replaces were wrong
 
 **Attempted:** one increment, chosen by the priority order in the brief. `good first issue` #21

@@ -133,25 +133,75 @@ deterministic signature would let an observer test candidate payloads against th
 Ed25519 throughout. Any future "COB/1 as an AP2 profile" has to confront that; it is not a detail
 that can be waved through.
 
-### x402 — still second-hand
+### x402
 
-**x402.** A payment *execution* protocol, HTTP-native, using stablecoins. The material read so far
-says it relies on **EIP-3009** (`transferWithAuthorization`) for gasless USDC transfers and
-**Permit2** for other ERC-20 tokens, and that Google published an official **A2A x402 extension**.
+**Read first-hand on 2026-10-08.** Core protocol from `coinbase/x402` — the repository has since
+moved to `x402-foundation/x402`, and Coinbase's copy is a development fork; this pass read the fork's
+`main`: `specs/x402-specification-v2.md` and `specs/schemes/exact/scheme_exact_evm.md`. The A2A
+extension from `google-agentic-commerce/a2a-x402`: `spec/v0.1/spec.md`. Nothing below is second-hand.
 
-> **Not yet read.** These x402 lines still come from announcement material and secondary write-ups,
-> not from the x402 specification. Treat every specific claim here as an assumption. Reading it, and
-> the A2A x402 extension, is the remaining half of issue
-> [#21](https://github.com/withinaz/communityofbillions/issues/21).
+- **What it is.** An open, chain- and transport-agnostic standard for internet-native payments,
+  reviving HTTP `402 Payment Required`. Three roles: **resource server**, **client**, **facilitator**
+  (verification and settlement). The facilitator pays gas but cannot change the amount or the
+  destination; both are fixed by the client's signature.
+- **The flow.** The client asks for a resource; the server answers `402` with a `PaymentRequired`
+  object in a `PAYMENT-REQUIRED` header. The client signs a `PaymentPayload` and retries with it in
+  `PAYMENT-SIGNATURE`. The server verifies (locally or through the facilitator's `POST /verify`),
+  does the work, then settles directly or through `POST /settle`, and returns a `SettlementResponse`
+  in `PAYMENT-RESPONSE`. `GET /supported` advertises the `(scheme, network)` pairs a facilitator can
+  handle; `GET /discovery/resources` lists monetised resources (a "Bazaar").
+- **Types.** `PaymentRequirements` is `{scheme, network, amount, asset, payTo, maxTimeoutSeconds,
+  extra}`. `PaymentPayload` carries the chosen requirement as `accepted`, the scheme-specific
+  `payload`, and an `extensions` map. `SettlementResponse` is `{success, errorReason?, payer?,
+  transaction, network, amount?}` — the `transaction` is the on-chain hash.
+- **Version 2.** The core specification is at **v2**, which moved networks to **CAIP-2**
+  (`eip155:8453` Base, `eip155:84532` Base Sepolia) and renamed v1's `maxAmountRequired` to `amount`.
+  The scheme directories also list `upto` and `batch-settlement`; `exact` is the one shipping.
+- **`exact` on EVM.** Three asset-transfer methods, chosen by what the token supports: **EIP-3009**
+  `transferWithAuthorization` (recommended, truly gasless — the USDC path), **Permit2** with a
+  witness-bearing proxy (the universal ERC-20 fallback), and **ERC-7710** delegation for smart
+  accounts. Replay protection is EIP-3009's 32-byte nonce plus a `validAfter`/`validBefore` window;
+  the authorization is an EIP-712 signature over secp256k1.
+- **The A2A x402 extension is real.** Canonical URI
+  `https://github.com/google-a2a/a2a-x402/v0.1`; declared in `capabilities.extensions`; state is
+  carried in `Message.metadata` as `x402.payment.status` — `payment-required`, `payment-submitted`,
+  `payment-rejected`, `payment-verified`, `payment-completed`, `payment-failed` — over the existing
+  A2A task states. It adds no task states, which is the precedent §8 asked for.
 
-The composition the secondary material describes, and the one AP2's own role description is
-consistent with: an agent uses **A2A** to find and talk to another agent, **AP2** to authorise the
-payment, and **x402** to settle it. The AP2 end of that is now verified; the x402 end is not.
+**The two things that matter to us.**
+
+1. **x402 is the settlement rail COB/1 deliberately does not have.** `cob.payment.receipt` is a
+   payee-signed *claim* (threat T11). x402's `SettlementResponse` names an on-chain transaction,
+   which a counterparty can check against the chain — the direction T11 points at. It is not a
+   solution by itself: the response is still produced by the facilitator, so a client must verify the
+   hash rather than trust the object.
+2. **The identity layers do not compose.** x402's `exact` scheme signs EIP-712 typed data with the
+   payer's secp256k1 key; COB/1 signs a canonical JSON envelope with Ed25519. That is a different
+   conflict from AP2's: the rail does not use our identity at all. Composition means carrying an x402
+   payload *inside* a COB/1 envelope as opaque data and keeping the two signature domains separate,
+   not expecting one envelope to satisfy both.
+
+> **Two discrepancies worth recording, both in the other specifications.**
+>
+> (a) **Version skew.** The A2A x402 extension is at **v0.1** and its examples still show x402 **v1**
+> fields — `x402Version: 1`, `maxAmountRequired`, `network: "base"`. Core x402 is at **v2**
+> (`x402Version: 2`, `amount`, CAIP-2). An implementer copying the extension's examples verbatim
+> would emit a v1 payload.
+>
+> (b) **Header name.** The extension's §7 says activation uses the `X-A2A-Extensions` header. A2A's
+> own extensions documentation says the header is **`A2A-Extensions`**, a comma-separated list of
+> URIs. One of the two is wrong, and this pass did not find a version that resolves it.
+
+The composition AP2's own role description is consistent with still holds: **A2A** to find and talk
+to another agent, **AP2** to authorise the payment, **x402** to settle it. Both ends are now read
+first-hand. Whether COB/1 should implement an x402 client, interop with one, or document why neither
+is issue [#25](https://github.com/withinaz/communityofbillions/issues/25) and is not decided here.
 
 Sources: [AP2 specification](https://github.com/google-agentic-commerce/AP2/blob/main/docs/ap2/specification.md),
-[Announcing AP2](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol),
-[Coinbase on AP2 + x402](https://www.coinbase.com/developer-platform/discover/launches/google_x402),
-[x402 explained](https://eco.com/support/en/articles/12328618-x402-protocol-explained-how-ai-agents-pay-onchain).
+[x402 specification v2](https://raw.githubusercontent.com/coinbase/x402/main/specs/x402-specification-v2.md),
+[exact scheme on EVM](https://raw.githubusercontent.com/coinbase/x402/main/specs/schemes/exact/scheme_exact_evm.md),
+[A2A x402 extension v0.1](https://raw.githubusercontent.com/google-agentic-commerce/a2a-x402/main/spec/v0.1/spec.md),
+[A2A extensions documentation](https://a2a-protocol.org/latest/topics/extensions/).
 
 ---
 
@@ -231,8 +281,9 @@ This is an operator decision, not a maintenance-pass one. Issue
 In rough dependency order. Each is a pass, not a day's work crammed into one a pass.
 
 1. **Read the AP2 specification and the x402 extension properly**, replacing the second-hand notes in
-   §3 with things actually verified. *AP2 was read on 2026-10-06 and §3 rewritten from it; x402 and
-   the A2A x402 extension are still unread.*
+   §3 with things actually verified. **Done.** AP2 was read on 2026-10-06; x402, the `exact` scheme
+   and the A2A x402 extension on 2026-10-08. §3 is first-hand throughout. What that reading leaves
+   open is composition across two signature domains, and the extension's v1/v2 skew.
 2. **Compare canonicalisation.** Check `canonical.js` against A2A's stated requirement for Agent Card
    signing, and write the comparison down. Either we match, or we have found a real gap in one of us.
 3. **Draft `cob.a2a` as an A2A extension**: URI, `AgentExtension` declaration, where COB/1 data lives
@@ -251,18 +302,24 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
 - Is COB/1's envelope still worth keeping once A2A's extension model can carry it? *Probably yes, as
   the canonical-and-signed payload — but the honest answer is "keep it, and find out by using it".*
 - Does AP2's mandate model subsume what `cob.payment.request` and `cob.payment.receipt` do? *On the
-  AP2 reading of 2026-10-06: **no**, but the answer is provisional until x402 is read.* AP2
+  AP2 reading of 2026-10-06: **no** — and the x402 reading of 2026-10-08 does not change that.* AP2
   authorises a payment and produces evidence of a user's delegation; it has no invoice addressed
   from one agent to another, no payer/payee identity of the COB/1 kind, and no settlement. Its
   Payment Receipt is a verifier's statement about a mandate — the Credential Provider, Network or
-  Merchant Payment Processor — not the payee's claim that a transfer happened. It does, however,
-  occupy the same slot in an A2A + AP2 + x402 stack that our payment messages occupy, so the
-  overlap is real even though the models are not interchangeable.
-- A2A says extensions must not change core structures. A settlement extension that wants to add task
-  **states** may be pushing against that. Worth checking before designing one.
+  Merchant Payment Processor — not the payee's claim that a transfer happened. x402 supplies the
+  settlement evidence our receipt only claims, but it too defines no invoice between two identified
+  agents; its `PaymentRequirements` are the server's terms and its `PaymentPayload` the client's
+  authorization. All three sit in the same layer, and none is interchangeable with the others.
+- A2A says extensions must not change core structures or add enum values, but its extensions
+  documentation also lists "state machine extensions" and allows **substates** in `metadata`. The
+  x402 extension takes the safe path: it keeps the core task states and puts a finer-grained
+  `x402.payment.status` in `Message.metadata`. That is the precedent to follow for `cob.a2a`; adding
+  task states is the part still in question.
 - What does "settled" mean when the settlement rail is x402 and the evidence is an on-chain
-  transfer? Our T11 (receipt forgery) says a receipt is a claim; x402 may make the claim verifiable
-  by construction. That would resolve the largest open risk in the threat model.
+  transfer? Our T11 (receipt forgery) says a receipt is a claim; x402's `SettlementResponse` names
+  the transaction, so the claim becomes checkable against the chain. But the response is still
+  produced by the facilitator, so it is evidence to verify rather than proof by construction. T11 is
+  narrowed, not closed — a client that does not check the hash learns nothing new.
 
 ---
 
@@ -299,3 +356,40 @@ not a rename; it would force a decision about the identity layer.
 
 **Not done:** x402 and the A2A x402 extension are still second-hand and still marked as such in §3.
 Reading them is the rest of issue #21.
+
+### 2026-10-08 — x402 and the A2A x402 extension read; §3 is first-hand throughout
+
+**Read:** x402 from `coinbase/x402` `main` (the development fork of the standard, which has moved to
+`x402-foundation/x402`) — `specs/x402-specification-v2.md`, `specs/schemes/exact/scheme_exact_evm.md`,
+`README.md`. The A2A x402 extension from `google-agentic-commerce/a2a-x402` — `spec/v0.1/spec.md`,
+`README.md`. A2A's own extensions documentation at `a2a-protocol.org/latest/topics/extensions/`, to
+check the activation header and the limits on extensions. Nothing was read second-hand.
+
+**Changed:** §3's x402 subsection rewritten from those files. The three claims the old second-hand
+paragraph carried are now settled: EIP-3009 is the recommended EVM transfer method and Permit2 the
+universal ERC-20 fallback (ERC-7710 is also listed); the A2A x402 extension exists, with canonical URI
+`https://github.com/google-a2a/a2a-x402/v0.1` and its state carried in `Message.metadata` rather than
+in new task states; and the composition "A2A to talk, AP2 to authorise, x402 to settle" is consistent
+with both specifications. §7.1 is marked done and §8's provisional answers are updated. Issue #21
+closes with this entry.
+
+**Findings recorded rather than smoothed over:**
+
+- **The identity layers do not compose.** x402 signs EIP-712 over secp256k1 with the payer's Ethereum
+  key; COB/1 signs Ed25519 over canonical JSON. Unlike AP2's Ed25519 exclusion, this is not a rule
+  against us — the rail simply uses a different identity. Composition means an x402 payload inside a
+  COB/1 envelope as opaque data, with two separate signature domains.
+- **The A2A x402 extension is one protocol version behind.** It is v0.1 and its examples use x402 v1
+  field names (`x402Version: 1`, `maxAmountRequired`, `network: "base"`), while core x402 is v2
+  (`amount`, CAIP-2).
+- **The activation header disagrees between the two specifications.** The extension says
+  `X-A2A-Extensions`; A2A's extensions documentation says `A2A-Extensions`. Not resolved here.
+- **x402 points the way out of T11 but does not close it.** Its `SettlementResponse` names an
+  on-chain transaction hash, which is externally checkable, but the response is produced by the
+  facilitator, so a client must verify the hash rather than trust the object.
+
+**Not done:** the decision this reading feeds — whether COB/1 implements an x402 client, interops
+with one, or documents why neither — is issue #25 and is not this pass's call. Nothing in the
+repository's code changed; this pass is notes only. The A2A steps after §7.1 remain unstarted:
+canonicalisation comparison (#22), the `cob.a2a` extension draft (#23), and the Agent Card decision
+for `.well-known/cob.json` (#24).
