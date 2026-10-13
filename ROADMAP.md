@@ -74,7 +74,7 @@ decide whether it composes with them or competes with them.** The notes argue fo
 record the uncomfortable parts rather than smoothing them over.
 
 - 🚧 Read AP2 and x402 properly, and replace the second-hand notes — [#21](https://github.com/withinaz/communityofbillions/issues/21)
-- 🗓 Compare `canonical.js` with A2A's Agent Card canonicalisation requirement — [#22](https://github.com/withinaz/communityofbillions/issues/22)
+- ✅ Compare `canonical.js` with A2A's Agent Card canonicalisation requirement — [#22](https://github.com/withinaz/communityofbillions/issues/22)
 - 🗓 Draft `cob.a2a`: the envelope as an A2A extension — [#23](https://github.com/withinaz/communityofbillions/issues/23)
 - 🗓 Decide whether `.well-known/cob.json` becomes an Agent Card — [#24](https://github.com/withinaz/communityofbillions/issues/24)
 - 🗓 Decide the relationship to x402 for settlement — [#25](https://github.com/withinaz/communityofbillions/issues/25)

@@ -72,6 +72,13 @@ documented specification revision.
 
 ### Documentation
 
+- **`docs/a2a.md` §5 compares `canonical.js` with A2A's Agent Card signing requirement** (§8.4.1),
+  read first-hand on 2026-10-13. The project's canonicaliser matches the RFC 8785 half on the three
+  axes A2A's own summary omits — literal UTF-8 strings, UTF-16 code-unit key ordering, and
+  ECMAScript number serialisation — and reproduces the section's worked example byte-for-byte, with
+  tests in `packages/core/test/canonical.test.js`. §8.4.1's other rule is Protocol Buffer field
+  presence, which is not canonicalisation and not something `canonical.js` can do; composing with
+  A2A therefore cannot mean signing the card with `canonicalize`.
 - **`docs/a2a.md` §3 now describes AP2 from its own specification** (v0.2), read first-hand on
   2026-10-06. Two claims it previously carried from launch material were wrong: AP2 has two mandates
   (Checkout and Payment, each open or closed, carried as SD-JWTs), not Intent / Cart / Payment, and

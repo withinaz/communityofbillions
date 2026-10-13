@@ -94,3 +94,53 @@ describe('canonicalize', () => {
     assert.equal(canonicalize({ a: shared, b: shared }), '{"a":{"x":1},"b":{"x":1}}');
   });
 });
+
+describe('canonicalize — the RFC 8785 points A2A §8.4.1 depends on', () => {
+  // A2A requires an Agent Card to be canonicalised with RFC 8785 before signing. Its own
+  // summary of the RFC omits the three rules implementations actually diverge on, so these
+  // tests pin the rules rather than the summary. The comparison is written up in
+  // docs/a2a.md §5 and is the increment for issue #22.
+
+  it('orders keys by UTF-16 code unit, not by Unicode code point', () => {
+    // U+10000 is the surrogate pair D800 DC00, so its first code unit sorts before
+    // U+E000. A code-point sort — Python's `sort_keys`, Go's `sort.Strings` — reverses
+    // that, and RFC 8785 §3.2.3 requires the code-unit order this asserts.
+    assert.equal(canonicalize({ '\uE000': 2, '\u{10000}': 1 }), '{"\u{10000}":1,"\uE000":2}');
+  });
+
+  it('serialises numbers the ECMAScript way, not by shortest exponent', () => {
+    // RFC 8785 §3.2.2.3 delegates to ECMAScript `Number::toString`. Python's `json.dumps`
+    // emits `1e-06` for the first of these, which is a different byte stream.
+    assert.equal(canonicalize(0.000001), '0.000001');
+    assert.equal(canonicalize(1e21), '1e+21');
+  });
+
+  it('reproduces the worked example printed in A2A specification §8.4.1', () => {
+    // The object the section says is left after its field-presence rules, and the
+    // canonical string it prints for that object. Both copied from the specification
+    // (`a2aproject/A2A` main, `docs/specification.md`, released version v1.0.0, read
+    // 2026-10-13). If this ever fails, one of the two implementations moved.
+    const card = {
+      name: 'Example Agent',
+      description: 'An example agent that echoes messages.',
+      supportedInterfaces: [
+        { url: 'https://example.com/a2a/v1', protocolBinding: 'JSONRPC', protocolVersion: '1.0' },
+      ],
+      version: '1.0.0',
+      capabilities: { streaming: false, pushNotifications: false },
+      defaultInputModes: ['text/plain'],
+      defaultOutputModes: ['text/plain'],
+      skills: [{ id: 'echo', name: 'Echo', description: 'Echoes the input.', tags: ['echo'] }],
+    };
+
+    const expected =
+      '{"capabilities":{"pushNotifications":false,"streaming":false},' +
+      '"defaultInputModes":["text/plain"],"defaultOutputModes":["text/plain"],' +
+      '"description":"An example agent that echoes messages.","name":"Example Agent",' +
+      '"skills":[{"description":"Echoes the input.","id":"echo","name":"Echo","tags":["echo"]}],' +
+      '"supportedInterfaces":[{"protocolBinding":"JSONRPC","protocolVersion":"1.0",' +
+      '"url":"https://example.com/a2a/v1"}],"version":"1.0.0"}';
+
+    assert.equal(canonicalize(card), expected);
+  });
+});

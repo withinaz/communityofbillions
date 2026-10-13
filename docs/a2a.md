@@ -247,6 +247,49 @@ Not nothing. Four things, and they are worth being precise about:
 What COB/1 does **not** have: adoption, a governance body, an SDK ecosystem, or a reason for anyone
 else to implement it. Those are not solved by writing more code.
 
+### The A2A §8.4.1 comparison
+
+§1 called Agent Card canonicalisation the single clearest point of contact between the two
+projects. It was checked first-hand on **2026-10-13** against the A2A specification on `main`
+(`a2aproject/A2A`, `docs/specification.md`, released version v1.0.0), and the result is pinned by
+tests in `packages/core/test/canonical.test.js`.
+
+**What §8.4.1 requires.** Three rules. Rule 2 is RFC 8785 (JCS) itself. Rule 1 is *not*
+canonicalisation: before the bytes are produced, Protocol Buffer field presence has to be resolved
+(unset `optional` fields omitted, explicitly-set ones kept even at their default, `REQUIRED` fields
+always present, default-valued non-required fields dropped). Rule 3 excludes the `signatures`
+member. Only rule 2 is a canonicalisation problem, and only rule 2 is what `canonical.js` is.
+
+**Where we match.** §8.4.1's own summary of the RFC — "lexicographic by key", "consistent
+representation of numbers, strings" — omits the three rules implementations actually diverge on.
+Those three are exactly the ones worth testing, and we pass all three:
+
+| RFC 8785 | What it requires | In `canonical.js` |
+| --- | --- | --- |
+| §3.2.2.2 strings | non-ASCII emitted as literal UTF-8, not `\uXXXX` | `JSON.stringify`; pinned by the existing "keeps non-ASCII characters as-is" test |
+| §3.2.2.3 numbers | the ECMAScript `Number::toString` algorithm | `JSON.stringify`; pinned by a test (`0.000001`, not `1e-06`) |
+| §3.2.3 key order | UTF-16 code units, not Unicode code points | `compareCodeUnits`; pinned by a surrogate-pair test |
+
+The section also prints a worked example, and `canonicalize` reproduces it byte-for-byte. That is a
+test rather than a claim. We match the whole of §8.4.1 that is canonicalisation.
+
+**Where we cannot match, and should not try.** Rule 1 is protobuf field presence, and a
+canonicaliser has no part in it. The section's "Original Agent Card" carries
+`capabilities.extensions: []`; canonicalising that object directly adds `"extensions":[]` to the
+byte stream, which is not the payload the specification signs. This is not a defect in either
+project, but it settles a question #23 will ask: composing with A2A cannot mean "sign the card with
+`canonicalize`". The field-presence step belongs to whatever builds the ProtoJSON view, and
+`canonical.js` starts after it.
+
+**The uncomfortable part.** §8.4.1 is under-determined in A2A's own tracker:
+[a2aproject/A2A#2122](https://github.com/a2aproject/A2A/issues/2122) reports that two first-party
+SDKs produce different bytes for the same card and that neither reproduces the section's worked
+example, because rule 1 asks for an output the normative ProtoJSON serializer cannot express. This
+pass read that report and did **not** independently reproduce it; what it did verify is that the
+example on `main` today is not the one quoted in the issue, so the vector pinned in the test is the
+one read on 2026-10-13. A signed document that two implementations disagree about is a live problem
+in the protocol we would be extending — worth knowing before #23, not after.
+
 ---
 
 ## 6. Options
@@ -286,6 +329,10 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
    open is composition across two signature domains, and the extension's v1/v2 skew.
 2. **Compare canonicalisation.** Check `canonical.js` against A2A's stated requirement for Agent Card
    signing, and write the comparison down. Either we match, or we have found a real gap in one of us.
+   **Done** on 2026-10-13. We match the RFC 8785 half of §8.4.1 on all three axes its own summary
+   omits, and reproduce the section's worked example byte-for-byte (tests in
+   `packages/core/test/canonical.test.js`). §8.4.1's field-presence rule is not canonicalisation and
+   is not ours to implement; the comparison is in §5.
 3. **Draft `cob.a2a` as an A2A extension**: URI, `AgentExtension` declaration, where COB/1 data lives
    in `metadata`, and what activation means. Specification first, code later.
 4. **Agent Card discovery.** Decide whether the planned `.well-known/cob.json` (issue #1) becomes an
@@ -393,3 +440,28 @@ with one, or documents why neither — is issue #25 and is not this pass's call.
 repository's code changed; this pass is notes only. The A2A steps after §7.1 remain unstarted:
 canonicalisation comparison (#22), the `cob.a2a` extension draft (#23), and the Agent Card decision
 for `.well-known/cob.json` (#24).
+
+### 2026-10-13 — `canonical.js` against A2A's Agent Card signing requirement
+
+**Read:** A2A specification §8.4.1–8.4.3 and its worked example, from `a2aproject/A2A` `main`,
+`docs/specification.md` (released version v1.0.0). Also read, as context and marked as such below,
+the open report [a2aproject/A2A#2122](https://github.com/a2aproject/A2A/issues/2122).
+
+**Changed:** `packages/core/test/canonical.test.js` gains a second block with three tests — the
+§8.4.1 worked example reproduced byte-for-byte, UTF-16 code-unit key ordering over a surrogate pair,
+and ECMAScript number serialisation. `docs/a2a.md` §5 gains the comparison and §7.2 is marked done.
+No production code changed: this pass checked an existing claim rather than altering behaviour.
+
+**What was found:** we match the RFC 8785 half of §8.4.1 on all three axes its own summary omits.
+Rule 1 of §8.4.1 is protobuf field presence, not canonicalisation — `canonicalize` on the section's
+"Original Agent Card" emits a different byte stream, because the field-presence step has not run.
+Composing with A2A therefore cannot mean "sign the card with `canonicalize`"; the envelope's
+canonical form and the Agent Card's are compatible but not the same operation.
+
+**The uncomfortable part:** A2A's own tracker reports two first-party SDKs disagreeing about exactly
+these bytes (#2122). That is a problem in the protocol we are proposing to extend, not in this
+repository, and it is recorded rather than smoothed over.
+
+**Not done:** `cob.a2a` (#23), the Agent Card decision (#24) and the x402 decision (#25) are
+unstarted. The comparison found no defect in `canonical.js`; it did find that no test runs the RFC's
+own reference vectors against it, which is now issue #27.

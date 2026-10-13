@@ -11,6 +11,72 @@ Rules for this file:
 
 ---
 
+## 2026-10-13 — canonical.js checked against A2A's Agent Card signing requirement
+
+**Attempted:** one increment, chosen by the priority order in the brief. No dated directive names
+this pass, so D-2's preference applies: the A2A track. The last entry's `Next` named §7.2 / issue
+#22 — compare `canonical.js` with A2A's Agent Card canonicalisation requirement — and that is what
+this pass did. A2A's specification §8.4.1–8.4.3 was read first-hand and our canonicaliser checked
+against it. Nothing else was attempted.
+
+**Landed:**
+
+- `docs/a2a.md` §5 gains "The A2A §8.4.1 comparison". It records what the section actually requires
+  (RFC 8785, plus Protocol Buffer field-presence preprocessing, plus exclusion of `signatures`), and
+  what we match: the three RFC 8785 rules A2A's own summary omits — literal UTF-8 strings, UTF-16
+  code-unit key ordering, ECMAScript number serialisation.
+- `packages/core/test/canonical.test.js` gains a second `describe` block with three tests: the
+  §8.4.1 worked example reproduced byte-for-byte, surrogate-pair key ordering (the axis a code-point
+  sort gets wrong), and `0.000001` / `1e+21` number serialisation. The suite goes from 170 to 173
+  passing tests. No production code changed.
+- §7.2 is marked done; §9 has the dated entry D-2 requires; issue #22 closes with this pass, and the
+  roadmap item moves to ✅ because a test now covers it.
+
+**What the comparison found, stated plainly:** we match the canonicalisation half of §8.4.1. The
+other half is not canonicalisation at all — rule 1 is protobuf field presence, and canonicalising
+the section's "Original Agent Card" directly emits `"extensions":[]`, which is not the payload the
+specification signs. A `cob.a2a` extension (#23) therefore cannot be "sign the card with
+`canonicalize`": the field-presence step belongs to whatever builds the ProtoJSON view. That is a
+finding about composition, not a defect in `canonical.js`.
+
+- **The uncomfortable finding, recorded in §5 rather than smoothed over:** A2A's §8.4.1 is
+  under-determined in its own tracker. [a2aproject/A2A#2122](https://github.com/a2aproject/A2A/issues/2122)
+  reports two first-party SDKs producing different bytes for the same card and neither reproducing
+  the section's example, because rule 1 asks for output the normative ProtoJSON serializer cannot
+  express. This pass read that report (through `gh api`) but did **not** independently reproduce it,
+  and says so. What it did verify is that the worked example on `main` today is not the one the
+  issue quotes. The pinned vector is the one read on 2026-10-13.
+
+**Gate results:** Gate 1 `node --check packages/core/test/canonical.test.js` passed. Gate 2
+**173 pass / 0 fail** — but, as in the last three entries, not as written: `node --test
+"packages/core/**/*.test.js"` fails in this sandbox because the default runner spawns a child per
+file and the pipe is denied (`spawn EPERM`). It was run as `node --test --test-isolation=none`, the
+same files and assertions. CI runs the unmodified command. Gate 3 `examples/two-agents/run.js`
+**19/19 expectations held**.
+
+**Still broken / not done:**
+
+- **The A2A draft required by D-3 could not be saved**, for the same reason as the last two passes:
+  the queue is outside this pass's file sandbox (`[sandbox: file access denied under workspace-write
+  mode]`). This pass touched A2A, so a draft is owed; the write was attempted and refused, and the
+  draft is deliberately not reproduced in the repository. Issue #26 already records the fix and this
+  pass adds nothing to it.
+- **`git pull --rebase` still fails in this sandbox** (`schannel: AcquireCredentialsHandle failed:
+  SEC_E_NO_CREDENTIALS`), so the branch was not confirmed against the remote. `git status --short`
+  was empty when the pass began. `git push` is left to the runner, as in earlier passes.
+- The comparison surfaced one real test gap: nothing runs RFC 8785's own reference vectors against
+  `canonical.js`, so the evidence for "we match JCS" is our own tests plus one borrowed example.
+  That is issue #27, opened this pass and deliberately not fixed in it.
+- The steps after this one are still not ours to take: `cob.a2a` (#23), the Agent Card decision
+  (#24) and the x402 decision (#25) are unstarted, and compose-or-compete (#20) is the operator's
+  call. The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are
+  still claims (T11), and issues #18/#19 remain open.
+
+**Next:** run the RFC 8785 reference vectors against `canonical.js` (issue #27) — small, and it
+turns "we match the RFC" from an argument into evidence. After that, §7.3 / issue #23.
+
+---
+
 ## 2026-10-08 — x402 read first-hand; the A2A notes have no second-hand claims left
 
 **Attempted:** one increment, chosen by the priority order in the brief. No dated directive names
