@@ -11,6 +11,81 @@ Rules for this file:
 
 ---
 
+## 2026-10-15 — the RFC 8785 reference corpus now runs against canonicalize
+
+**Attempted:** one increment, chosen by the priority order in the brief. No dated directive names
+this pass, so D-2's preference applies: the A2A track. Issue #27 (`good first issue`, `area:core`) is
+the follow-up the 2026-10-13 pass opened when it compared `canonical.js` with A2A's Agent Card
+signing rule: §5 of `docs/a2a.md` and `canonical.js` both claim a match with RFC 8785, but every
+test behind that claim was written from our own reading of the RFC. This pass ran the RFC's own
+vectors. Nothing else was attempted.
+
+**Landed:**
+
+- The six input/output vector pairs from the `testdata` directory of
+  `cyberphone/json-canonicalization` (the RFC 8785 reference implementation), commit
+  `32a48195b9b20fe67b1795e39e4509f14d860b45`, are vendored verbatim under
+  `packages/core/test/vectors/rfc8785/`, with provenance and the Apache-2.0 notice in that
+  directory's README. The seven `hex-ieee,expected` sample lines from the upstream
+  `testdata/README.md` are vendored alongside them as `es6-samples.txt`.
+- `packages/core/test/rfc8785.test.js` parses each input as JSON text and asserts that
+  `canonicalize` reproduces the expected output byte-for-byte, and drives the seven number samples
+  through the same assertion. The core suite goes from 173 to **180 pass / 0 fail**, seven new
+  tests.
+- `docs/a2a.md` §5 gains a short "checked against the RFC's own corpus" paragraph and §9 gains the
+  dated entry D-2 requires. §7.2 stays done. No production code changed: this pass checked a claim
+  rather than altering behaviour, which is what issue #27 asked for.
+- Issue #27 is resolved by this pass. No roadmap item moves: no roadmap line was waiting on this,
+  and the brief's rule is that ✅ needs a covering test, not that a new test needs to move a line.
+
+**What the vectors found:** all thirteen pass — nothing in `canonical.js` changed and nothing
+needed to. The claim "we match RFC 8785" now rests on the corpus that defines the RFC rather than
+only on tests written from our reading of it. Two limits are stated in the test and in §5 rather
+than left implicit:
+
+1. The corpus is JSON text and `canonicalize` takes a value, so `JSON.parse` sits in the middle.
+   None of the six inputs depends on anything it cannot carry (no integer past 2^53, no duplicate
+   key), so the expected bytes describe the whole document — but a future vector could.
+2. The full ES6 number corpus is a 100-million-line download and is **not** vendored. The number
+   axis is sampled by the seven documented examples rather than proved over the generator's whole
+   output; those samples do reach `-0` (bit pattern `8000000000000000`) and the 2^53 boundary.
+
+**Gate results:** Gate 1 `node --check packages/core/test/rfc8785.test.js` passed. Gate 2
+**180 pass / 0 fail** — but, as in the last five entries, not as written:
+`node --test "packages/core/**/*.test.js"` fails in this sandbox because the default runner spawns a
+child per file and the pipe is denied (`spawn EPERM`). It was run as
+`node --test --test-isolation=none`, the same files and assertions. CI runs the unmodified command.
+Gate 3 `examples/two-agents/run.js` **19/19 expectations held**. No `.js` under `src/` changed, so
+the zero-dependency rule is not in play.
+
+**Still broken / not done:**
+
+- **The A2A draft required by D-3 could not be saved.** This pass touched A2A, so a draft is owed.
+  The write to `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue\2026-10-15-rfc8785-vectors.md`
+  was attempted and refused (`[sandbox: file access denied under workspace-write mode]`); the
+  one-shot escalation needs an approval channel and an unattended pass has none, so it fails closed.
+  As on the previous three A2A passes, the draft is deliberately not reproduced in the repository.
+  Issue #26 records the fix and this pass adds nothing to it.
+- **The number corpus is sampled, not proved.** A bounded local subset would mean reimplementing
+  `numgen.js` (or vendoring a slice of the release download); that is a pass of its own, and it is
+  not opened as an issue because #27 named the corpus and this pass closed the part of it that is
+  practical. The limit is written into `docs/a2a.md` §5 and the vectors README.
+- **`git pull --rebase` still fails in this sandbox** (`schannel: AcquireCredentialsHandle failed:
+  SEC_E_NO_CREDENTIALS`), so the branch was not confirmed against the remote. `git status --short`
+  was empty when the pass began. `git push` is left to the runner, as in earlier passes; if the
+  runner does not push, issue #27's close comment names a commit that is only local.
+- The steps after this one are still not ours to take: `cob.a2a` (#23), the Agent Card decision
+  (#24) and the x402 decision (#25) are unstarted, and compose-or-compete (#20) is the operator's
+  call. The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts are
+  still claims (T11), and issues #18/#19 remain open.
+
+**Next:** §7.3 / issue #23 — draft `cob.a2a` as an A2A extension (URI, `AgentExtension` declaration,
+where COB/1 data lives in `metadata`, what activation means). It is the next step in dependency order
+and the 2026-10-13 and 2026-10-15 findings both feed it: the field-presence step belongs to whatever
+builds the ProtoJSON view, not to `canonicalize`.
+
+---
+
 ## 2026-10-13 — canonical.js checked against A2A's Agent Card signing requirement
 
 **Attempted:** one increment, chosen by the priority order in the brief. No dated directive names

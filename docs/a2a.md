@@ -273,6 +273,16 @@ Those three are exactly the ones worth testing, and we pass all three:
 The section also prints a worked example, and `canonicalize` reproduces it byte-for-byte. That is a
 test rather than a claim. We match the whole of §8.4.1 that is canonicalisation.
 
+**Checked against the RFC's own corpus (2026-10-15).** §8.4.1 pins rule 2 to RFC 8785, so a
+disagreement there would be a defect in `canonicalize` rather than in A2A — and every test above was
+written from our own reading of the RFC. The reference corpus from `cyberphone/json-canonicalization`
+(the RFC 8785 reference implementation) is now vendored under
+`packages/core/test/vectors/rfc8785/` and run by `packages/core/test/rfc8785.test.js`: all six
+structural vectors reproduce byte-for-byte, and so do the seven ES6 number samples that repository's
+README documents. The full ES6 number corpus — 100 million lines — is not vendored, so the number
+axis is sampled rather than proved over the generator's whole output. That is the honest limit of the
+check. No production code changed; the increment is issue #27.
+
 **Where we cannot match, and should not try.** Rule 1 is protobuf field presence, and a
 canonicaliser has no part in it. The section's "Original Agent Card" carries
 `capabilities.extensions: []`; canonicalising that object directly adds `"extensions":[]` to the
@@ -465,3 +475,29 @@ repository, and it is recorded rather than smoothed over.
 **Not done:** `cob.a2a` (#23), the Agent Card decision (#24) and the x402 decision (#25) are
 unstarted. The comparison found no defect in `canonical.js`; it did find that no test runs the RFC's
 own reference vectors against it, which is now issue #27.
+
+### 2026-10-15 — the RFC 8785 reference corpus now runs against `canonicalize`
+
+**Read:** the `testdata` directory of `cyberphone/json-canonicalization`, the RFC 8785 reference
+implementation, at commit `32a48195b9b20fe67b1795e39e4509f14d860b45` — the six input/output vector
+pairs, and the `testdata/README.md` that documents the ES6 number file format.
+
+**Changed:** the six vector pairs are vendored verbatim under `packages/core/test/vectors/rfc8785/`,
+with provenance and licence in that directory's README, and
+`packages/core/test/rfc8785.test.js` parses each input and asserts that `canonicalize` reproduces
+the expected byte stream exactly. The seven `hex-ieee,expected` sample lines printed in the upstream
+README are vendored alongside them and driven through the same test. The core suite goes from 173 to
+180 tests. No production code changed: this pass checked the claim §5 makes rather than altering
+behaviour. The increment is issue #27.
+
+**What was found:** all thirteen vectors pass. The claim "we match RFC 8785" now rests on the RFC's
+own corpus rather than only on tests written from our reading of it. Two honest limits, both in the
+test's comments: the corpus is JSON text while `canonicalize` takes a value, so `JSON.parse` sits in
+the middle — none of these six vectors depends on anything it cannot carry, but a future vector
+could; and the full ES6 number corpus is a 100-million-line download that is not vendored, so the
+number axis is sampled by the seven documented examples — which do reach `-0` and the 2^53 boundary —
+rather than proved over the generator's whole output.
+
+**Not done:** the number corpus remains unproved; producing a bounded local subset would mean
+reimplementing `numgen.js`, which is a pass of its own. The steps after this one are still unstarted:
+`cob.a2a` (#23), the Agent Card decision (#24) and the x402 decision (#25).

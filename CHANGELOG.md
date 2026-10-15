@@ -94,6 +94,13 @@ documented specification revision.
   Ed25519 identity. Two discrepancies in the other specifications are recorded: the A2A x402
   extension's examples still use x402 v1 field names, and it names the activation header
   `X-A2A-Extensions` where A2A's own documentation says `A2A-Extensions`.
+- **`canonical.js` is now run against the RFC 8785 reference vectors** (issue #27). The six
+  input/output pairs from `cyberphone/json-canonicalization`, the RFC's reference implementation, are
+  vendored verbatim under `packages/core/test/vectors/rfc8785/`, and
+  `packages/core/test/rfc8785.test.js` asserts that `canonicalize` reproduces each expected byte
+  stream exactly, together with the seven ES6 number samples that repository's README documents. All
+  pass. The full 100-million-line ES6 number corpus is not vendored, so the number axis is sampled
+  rather than proved. No production code changed.
 
 ## [0.1.0] — 2026-09-28
 
