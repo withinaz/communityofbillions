@@ -11,6 +11,55 @@ Rules for this file:
 
 ---
 
+## 2026-10-20 — the pass was failing on a credential it was never given
+
+**Attempted:** find out why the 08:40 pass stopped after 47 seconds with
+`MISSING_CREDENTIAL: llm-deepseek: no API key for provider route "deepseek-official"`, when the
+key had been stored from the web Models page weeks earlier and every pass since September had
+worked.
+
+**What was wrong:** `dsh headless` is not the interactive app. Its bundle disables the harness
+credentials plugin on purpose — *"one-shot jobs use launch-time credentials instead of the
+interactive store"* — so the scheduled pass only ever sees what is already in its own environment.
+The stored document was never consulted, and nothing in the runner was putting the key into that
+environment. The `dsh` install had also been upgraded from `0.1.7-rc.2` to `0.2.1-rc.2`, which is
+when the passes stopped working, but the version was a coincidence: the headless design is the
+cause, and it would have bitten on any fresh install.
+
+**Landed:**
+
+- `tools/schedule/run-pass.ps1` reads `DEEPSEEK_API_KEY` out of `$DSH_HOME/.credentials.yaml` and
+  sets it in its own process before invoking the agent, for the maintenance pass and the comment
+  responder alike. An already-exported value wins and the log says which source was used. A key
+  that exists in neither place warns and continues, so the pass still runs the gates and writes a
+  verdict instead of collapsing before the first line of work.
+- The document layout is fixed and tiny, so it is read directly rather than with a YAML parser: the
+  runner has to keep working for a year with no dependencies at all. 17 new assertions cover the
+  reader and the injection, including a strict-mode null-property trap that the first draft walked
+  into and the tests caught before it shipped.
+- `agents/maintenance/README.md` gains a **Credentials** section, because "the key is stored, why
+  is the pass asking for one?" is exactly the question the next person will have.
+- A second, smaller bug fell out of reading the log of the verification run: the pass summary
+  printed the *post*-agent head as `head before`, so a pass that committed anything reported the
+  same value twice and could not be used to tell what it had done. It now prints the real
+  pre-agent head.
+
+**Verified:** `dsh headless` answers with the lifted key, and a full pass at 08:55 landed
+`febc9fa` (*core: add amount round-trip property tests*) and pushed it. The 08:40 failure line
+stays in the operator's `result.txt` above the 08:55 success; the log is not rewritten.
+
+**Still broken / not done:**
+
+- The agent cannot push from inside its own sandbox (`cannot create standard input pipe for
+  remote-https`), so every pass depends on the runner's push afterwards. If that push fails, the
+  work stays local while the verdict still says `ok`. The verdict is about the pass, not about the
+  remote.
+- The runner's credential reading covers `NAME: value` lines only. A future credentials document
+  that stores values in flow style or with block scalars would read as absent — the pass would warn
+  and fail exactly as it did this morning, which is at least the honest failure.
+
+---
+
 ## 2026-10-20 — amount round-tripping is a property, not six examples
 
 **Attempted:** one increment, chosen by the priority order in the brief. No dated directive names

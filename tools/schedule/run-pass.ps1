@@ -1085,7 +1085,6 @@ exactly one pass. When a decision is not yours to make, open an issue and stop.
 
     # ------------------------------------------------------------ ensure nothing is left behind
 
-    $head = (git rev-parse --short HEAD)
     if (-not $NoPush) {
         git push 2>&1 | ForEach-Object { Write-Log "  $_" }
     }
@@ -1121,7 +1120,7 @@ exactly one pass. When a decision is not yours to make, open an issue and stop.
     Write-Log ''
     Write-Log 'pass summary'
     Write-Log "  agent exit code : $agentExit"
-    Write-Log "  head before     : $head"
+    Write-Log "  head before     : $headBeforeAgent"
     Write-Log "  head after      : $finalHead"
     Write-Log "  last commit     : $log"
     Write-Log "  leftovers       : $(if ($dirty) { if ($leftoverCommitted) { 'committed and pushed' } else { 'LEFT DIRTY - human attention needed' } } else { 'none' })"
