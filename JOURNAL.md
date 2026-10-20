@@ -11,6 +11,61 @@ Rules for this file:
 
 ---
 
+## 2026-10-20 — amount round-tripping is a property, not six examples
+
+**Attempted:** one increment, chosen by the priority order in the brief. No dated directive names
+this pass. Three issues were already in progress with open pull requests; #13 (`good first issue`,
+`area:core`) had PR #16 open since 2026-09-29, narrowly scoped to the missing property test. This
+pass reviewed that PR rather than writing a duplicate: an open issue is a promise, and #13 was the
+smallest real item in the board's Phase 1 column. The A2A draft (#23) was the other candidate and
+remains the next step.
+
+**Landed:**
+
+- `packages/core/test/amount.test.js` gains a generated round-trip test for
+  `parseAmountToBaseUnits` / `formatBaseUnits`. It uses the fixed seed `0xC0B10001`, starts with
+  explicit `decimals = 0` cases (`"0"`, `"1"`, `"42"`), covers every decimal count from 0 to 18,
+  then adds 500 generated valid amounts. Each case must parse without throwing, and the formatted
+  result must compare equal by value to the original amount. A seeded LCG and amount generator are
+  local to the test; no dependency was added.
+- The core suite goes from 180 to **181 pass / 0 fail**. No production code changed. The test is
+  PR #16 by Polly Labs, landed with the contributor's authorship preserved in the commit trailer.
+- Issue #13 closes and its board item moves to Done. No `CHANGELOG.md` entry (tests only) and no
+  `ROADMAP.md` line moves (no roadmap item was waiting on this).
+- A2A was not touched this pass: no entry is added to `docs/a2a.md` §9, and no draft is owed.
+
+**Gate results:** Gate 1 `node --check packages/core/test/amount.test.js` passed. Gate 2 **181 pass
+/ 0 fail** — but, as in the previous six entries, not as written: `node --test
+"packages/core/**/*.test.js"` fails in this sandbox because the default runner spawns a child per
+file and the pipe is denied (`spawn EPERM`). It was run as `node --test --test-isolation=none`, the
+same files and assertions. CI runs the unmodified command. Gate 3 `examples/two-agents/run.js`
+**19/19 expectations held**.
+
+**Still broken / not done:**
+
+- The new test is one fixed seed and 500 generated cases, not an exhaustive proof. It covers the
+  positive round-trip only: it does not exercise `formatBaseUnits` with negative base units, nor
+  `decimals > 18`, and it cannot prove the generator reached every precision edge. The explicit
+  `decimals = 0` cases and the seed in every failure message are what make a failure reproducible.
+- **PR #17 remains open and unreviewed.** It contains the `cob keygen --force` guard for #14, but
+  also unrelated CLI output and comment removals, so it is not landable as one increment. PR #15
+  (the settlement-handshake diagram for #12) also remains open and unreviewed. Neither was touched
+  here.
+- `git pull --rebase` and `git push` need git helper pipes that this sandbox denies, so the branch
+  was not re-fetched or pushed by this pass. `git status` was clean and `HEAD` equalled
+  `origin/main` when checked at the start. If the runner does not push, the issue comment naming
+  this commit refers to a local commit only.
+- The A2A steps after the canonicalisation work are still unstarted: `cob.a2a` (#23), the Agent Card
+  decision (#24) and the x402 decision (#25), with compose-or-compete (#20) still the operator's
+  call. The pre-existing gaps are unchanged: no registry, no transport, no nonce cache, receipts
+  are still claims (T11), and issues #18/#19 remain open.
+
+**Next:** §7.3 / issue #23 — draft `cob.a2a` as an A2A extension (URI, `AgentExtension` declaration,
+where COB/1 data lives in `metadata`, what activation means). If PR hygiene comes first, split the
+unrelated churn out of PR #17 and land only the keygen guard for #14.
+
+---
+
 ## 2026-10-15 — the RFC 8785 reference corpus now runs against canonicalize
 
 **Attempted:** one increment, chosen by the priority order in the brief. No dated directive names
