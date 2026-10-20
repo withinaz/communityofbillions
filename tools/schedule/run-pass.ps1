@@ -164,6 +164,121 @@ function Get-PowerShellHost {
     return $null
 }
 
+function Resolve-CredentialDocument {
+    <#
+        Where the harness keeps its managed credentials document.
+
+        `$DSH_HOME` wins when the operator set it; otherwise the harness default lives under
+        the user's home. Kept separate from the parsing below so that a test can point it at a
+        file of its own instead of the operator's real credentials.
+    #>
+    param([string] $DshHome = '')
+
+    $root = if ($DshHome) { $DshHome }
+            elseif ($env:DSH_HOME) { $env:DSH_HOME }
+            elseif ($env:USERPROFILE) { Join-Path $env:USERPROFILE '.dsh' }
+            elseif ($env:HOME) { Join-Path $env:HOME '.dsh' }
+            else { '' }
+
+    if (-not $root) { return '' }
+    return (Join-Path $root '.credentials.yaml')
+}
+
+function Get-ManagedCredential {
+    <#
+        Read one reference out of the harness credentials document, or $null.
+
+        Why this exists: `dsh headless` is not the interactive app. Its bundle disables the
+        credentials plugin on purpose —
+
+            # One-shot jobs use launch-time credentials instead of the interactive store.
+
+        — so a scheduled pass only ever sees what is already in its own environment. A key
+        stored from the web Models page is therefore invisible to the pass, and the run dies
+        with MISSING_CREDENTIAL about forty seconds in, after the pull and the log header. That
+        reads like an outage, when the only thing missing is one export.
+
+        The document is small and its layout is fixed: `refs:` holds `NAME: value` pairs at one
+        indent, and `records:` holds owner-scoped grants, none of which is an API key. Reading
+        it directly is cheaper and far more robust than pulling a YAML parser into a task that
+        has to keep working for a year with no dependencies at all.
+
+        The value is returned, never logged: only the name of the reference ever reaches a log.
+    #>
+    param(
+        [Parameter(Mandatory)][string] $Ref,
+        [string] $Path = ''
+    )
+
+    if (-not $Path) { $Path = Resolve-CredentialDocument }
+    if (-not $Path -or -not (Test-Path -LiteralPath $Path)) { return $null }
+
+    $inRefs = $false
+    foreach ($line in @(Get-Content -LiteralPath $Path -ErrorAction SilentlyContinue)) {
+        if ($line -match '^\s*#') { continue }
+
+        # A section header, at column zero, with nothing after the colon.
+        if ($line -match '^([A-Za-z_][A-Za-z0-9_]*):\s*$') {
+            $inRefs = ($Matches[1] -eq 'refs')
+            continue
+        }
+
+        if (-not $inRefs) { continue }
+
+        if ($line -match ('^\s+' + [regex]::Escape($Ref) + ':\s*(.+?)\s*$')) {
+            $value = $Matches[1].Trim()
+            # The writer never quotes, but a hand edit might.
+            if ($value.Length -ge 2) {
+                $first = $value.Substring(0, 1)
+                $last = $value.Substring($value.Length - 1, 1)
+                if (($first -eq '"' -and $last -eq '"') -or ($first -eq "'" -and $last -eq "'")) {
+                    $value = $value.Substring(1, $value.Length - 2)
+                }
+            }
+            if ($value.Length -gt 0) { return $value }
+            return $null
+        }
+    }
+
+    return $null
+}
+
+function Import-LaunchCredentials {
+    <#
+        Put the stored references into this process's environment before the agent starts.
+
+        Called once, early, because every path that invokes `dsh headless` needs it: the
+        maintenance pass and the comment responder fail identically without it.
+
+        The value only ever lives in this process and its children for the duration of the
+        run. It is never written anywhere, and nothing about it is logged beyond its name.
+    #>
+    param([string[]] $Refs = @('DEEPSEEK_API_KEY'))
+
+    foreach ($ref in $Refs) {
+        # Under StrictMode a missing variable makes `$null.Value` throw, so read the item first.
+        $existing = ''
+        $item = Get-Item -LiteralPath "Env:$ref" -ErrorAction SilentlyContinue
+        if ($item) { $existing = [string] $item.Value }
+
+        if ($existing) {
+            Write-Log "credential : $ref from the launching environment"
+            continue
+        }
+
+        $stored = Get-ManagedCredential -Ref $ref
+        if ($stored) {
+            Set-Item -LiteralPath "Env:$ref" -Value $stored
+            Write-Log "credential : $ref from the managed store"
+            continue
+        }
+
+        Write-Log "credential : $ref is in neither the environment nor the managed store" 'WARN'
+        Write-Log "             headless passes will fail with MISSING_CREDENTIAL until it is stored" 'WARN'
+        Write-Log "             on the web Models page, or exported in the launcher's environment" 'WARN'
+    }
+}
+
 function Invoke-AgentTask {
     <#
         Run one headless task, feeding the prompt through stdin, and return the exit code.
@@ -845,6 +960,13 @@ Write-Log "communityofbillions maintenance pass"
 Write-Log "repository : $RepoPath"
 Write-Log "log        : $PassLog"
 Write-Log "agent log  : $LogDir"
+
+# ---------------------------------------------------------------- credentials
+
+# `dsh headless` reads launch-time credentials only, so the key the operator stored from the
+# web Models page has to be handed to this process explicitly. Doing it here, once, keeps the
+# single source of truth where the operator already put it.
+Import-LaunchCredentials
 
 # ---------------------------------------------------------------- preflight
 

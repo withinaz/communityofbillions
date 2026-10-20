@@ -105,7 +105,10 @@ $wanted = @(
     'Test-ReplyKey',
     'Test-ReplyBody',
     'Read-CommentState',
-    'Save-CommentState'
+    'Save-CommentState',
+    'Resolve-CredentialDocument',
+    'Get-ManagedCredential',
+    'Import-LaunchCredentials'
 )
 
 foreach ($name in $wanted) {
@@ -253,6 +256,125 @@ try {
     Assert-That 'a comment recorded as handled is not offered again after a reload' ($again.pending.Count -eq 0)
 } finally {
     Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# ---------------------------------------------------------------- credentials
+
+# `dsh headless` disables the harness credentials plugin on purpose ("one-shot jobs use
+# launch-time credentials instead of the interactive store"), so the runner has to lift the
+# stored reference into its own environment. These assertions cover the reader, because the
+# failure it prevents is expensive and quiet: a pass that pulls, logs its header, waits
+# forty-seven seconds and then reports an opaque MISSING_CREDENTIAL.
+
+Write-Host ''
+Write-Host 'Resolve-CredentialDocument'
+
+Assert-That 'an explicit harness home wins' `
+    ((Resolve-CredentialDocument -DshHome 'C:\harness') -eq 'C:\harness\.credentials.yaml')
+
+$previousDshHome = $env:DSH_HOME
+try {
+    $env:DSH_HOME = 'C:\from-env'
+    Assert-That 'otherwise $DSH_HOME decides' `
+        ((Resolve-CredentialDocument) -eq 'C:\from-env\.credentials.yaml')
+    Remove-Item Env:DSH_HOME -ErrorAction SilentlyContinue
+    $resolved = Resolve-CredentialDocument
+    Assert-That 'and with neither set it falls back to the user profile' ($resolved -like '*\.dsh\.credentials.yaml')
+} finally {
+    if ($previousDshHome) { $env:DSH_HOME = $previousDshHome }
+    else { Remove-Item Env:DSH_HOME -ErrorAction SilentlyContinue }
+}
+
+Write-Host ''
+Write-Host 'Get-ManagedCredential'
+
+$credDir = Join-Path ([System.IO.Path]::GetTempPath()) ("cob-cred-test-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path $credDir | Out-Null
+$credFile = Join-Path $credDir '.credentials.yaml'
+
+try {
+    $document = @"
+version: 1
+records:
+  client-connection/browser-session:
+    kind: grant
+    payload:
+      version: 1
+      secret: not-an-api-key
+refs:
+  # a comment inside the section is not an entry
+  # ANOTHER_KEY: commented-out
+  DEEPSEEK_API_KEY: sk-value-from-the-store
+  COB_TEST_CREDENTIAL: sk-lifted-into-the-environment
+  QUOTED_KEY: "sk-quoted"
+"@
+    Set-Content -LiteralPath $credFile -Value $document -Encoding utf8
+
+    Assert-That 'reads a reference out of the refs section' `
+        ((Get-ManagedCredential -Ref 'DEEPSEEK_API_KEY' -Path $credFile) -eq 'sk-value-from-the-store')
+    Assert-That 'and strips a hand-edited quoted value' `
+        ((Get-ManagedCredential -Ref 'QUOTED_KEY' -Path $credFile) -eq 'sk-quoted')
+    Assert-That 'a commented-out entry is not a value' `
+        ($null -eq (Get-ManagedCredential -Ref 'ANOTHER_KEY' -Path $credFile))
+    Assert-That 'a reference that is not stored reads as absent' `
+        ($null -eq (Get-ManagedCredential -Ref 'SOME_OTHER_KEY' -Path $credFile))
+    Assert-That 'a grants record is not a reference' `
+        ($null -eq (Get-ManagedCredential -Ref 'browser-session' -Path $credFile))
+    Assert-That 'a missing document reads as absent rather than throwing' `
+        ($null -eq (Get-ManagedCredential -Ref 'DEEPSEEK_API_KEY' -Path (Join-Path $credDir 'nope.yaml')))
+
+    # An empty value is an absent credential: sending "" to the provider would fail later and
+    # less clearly than reporting that nothing is stored.
+    $emptyFile = Join-Path $credDir 'empty.yaml'
+    Set-Content -LiteralPath $emptyFile -Value @('version: 1', 'refs:', '  EMPTY_KEY:') -Encoding utf8
+    Assert-That 'an empty value reads as absent' `
+        ($null -eq (Get-ManagedCredential -Ref 'EMPTY_KEY' -Path $emptyFile))
+
+    # The point of the whole exercise: the runner turns the stored value into launch-time
+    # environment for the headless agent, and the value never reaches a log line.
+    Write-Host ''
+    Write-Host 'Import-LaunchCredentials'
+
+    $script:credLog = @()
+    function Write-Log {
+        param([string] $Message, [string] $Level = 'INFO')
+        $script:credLog += [pscustomobject]@{ message = $Message; level = $Level }
+    }
+
+    $env:DSH_HOME = $credDir
+    Remove-Item Env:COB_TEST_CREDENTIAL -ErrorAction SilentlyContinue
+    Import-LaunchCredentials -Refs @('COB_TEST_CREDENTIAL')
+    Assert-That 'the stored value reaches the process environment' `
+        ($env:COB_TEST_CREDENTIAL -eq 'sk-lifted-into-the-environment')
+    Assert-That 'the log names the reference' `
+        (($script:credLog.message -join "`n") -like '*COB_TEST_CREDENTIAL from the managed store*')
+    Assert-That 'and never carries the value' `
+        (($script:credLog | ConvertTo-Json -Compress) -notlike '*sk-lifted-into-the-environment*')
+
+    # An environment that already has the key wins: that is the documented override, and it
+    # must not be silently replaced by an older stored value.
+    $env:COB_TEST_CREDENTIAL = 'sk-from-the-launching-environment'
+    Import-LaunchCredentials -Refs @('COB_TEST_CREDENTIAL')
+    Assert-That 'an exported value is left alone' `
+        ($env:COB_TEST_CREDENTIAL -eq 'sk-from-the-launching-environment')
+    Assert-That 'and reported as coming from the environment' `
+        (($script:credLog[-1].message) -like '*from the launching environment*')
+
+    # Absent everywhere: a warning, not a throw. A pass that cannot find the key still has to
+    # run the gates and write its verdict rather than collapse before it starts.
+    Remove-Item Env:COB_ABSENT_CREDENTIAL -ErrorAction SilentlyContinue
+    $script:credLog = @()
+    Import-LaunchCredentials -Refs @('COB_ABSENT_CREDENTIAL')
+    Assert-That 'a credential that exists nowhere warns instead of throwing' `
+        (@($script:credLog | Where-Object { $_.level -eq 'WARN' }).Count -ge 1)
+    Assert-That 'and leaves the environment untouched' `
+        (-not (Test-Path Env:COB_ABSENT_CREDENTIAL))
+} finally {
+    Remove-Item Env:COB_TEST_CREDENTIAL -ErrorAction SilentlyContinue
+    Remove-Item Env:COB_ABSENT_CREDENTIAL -ErrorAction SilentlyContinue
+    if ($previousDshHome) { $env:DSH_HOME = $previousDshHome }
+    else { Remove-Item Env:DSH_HOME -ErrorAction SilentlyContinue }
+    Remove-Item -LiteralPath $credDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # ---------------------------------------------------------------- result

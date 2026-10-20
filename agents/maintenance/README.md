@@ -82,6 +82,39 @@ continues from the repository, not from a schedule, so a missed pass costs a day
 - **[Issues](https://github.com/withinaz/communityofbillions/issues)** — work identified but not yet done.
 - **[ROADMAP.md](../../ROADMAP.md)** — where this is all going.
 
+## Credentials
+
+The unattended pass runs `dsh headless`, which is the one-shot app rather than the interactive
+one. Its bundle disables the harness credentials plugin on purpose:
+
+```yaml
+# One-shot jobs use launch-time credentials instead of the interactive store.
+- id: credentials
+  disabled: true
+```
+
+So a key stored from the web Models page is invisible to it, and the pass stops with
+`MISSING_CREDENTIAL` about forty seconds in — after the pull and the log header, which reads like
+an outage rather than one missing export. The runner therefore lifts the reference out of the
+managed document (`$DSH_HOME/.credentials.yaml`) into its own environment before invoking the agent,
+and says so:
+
+```
+credential : DEEPSEEK_API_KEY from the managed store
+```
+
+What follows from that:
+
+- The key is stored once, where the operator normally puts it. Rotating it there is enough;
+  nothing else needs editing.
+- If the variable is already exported when the runner starts, that value wins and is reported as
+  coming from the launching environment. That is the documented override, and it is what CI or a
+  one-off run should use.
+- If neither source has it, the pass warns and carries on. It still runs the gates and writes its
+  verdict, which is more useful than collapsing before the first line of work.
+- The value lives only in the runner process and its children, for the length of the pass. It is
+  never written to the repository, to a log, or to the state directory.
+
 ## Running a pass yourself
 
 ```bash
