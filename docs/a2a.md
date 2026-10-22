@@ -501,3 +501,23 @@ rather than proved over the generator's whole output.
 **Not done:** the number corpus remains unproved; producing a bounded local subset would mean
 reimplementing `numgen.js`, which is a pass of its own. The steps after this one are still unstarted:
 `cob.a2a` (#23), the Agent Card decision (#24) and the x402 decision (#25).
+
+### 2026-10-22 — no A2A change: the draft was reverted for a verifier bug
+
+**Read:** A2A 1.0 from `a2aproject/A2A` `main` at commit
+`98279d62316361ba8451eaef300f72b72e169185` — §3.2.6, §4.6, §8 — the normative
+`specification/a2a.proto` at blob `2814f0f9a8a3db0fa1976dd4aece8ce38700a0bf`, and the extensions
+documentation. This was for a draft of `cob.a2a` (#23).
+
+**Changed:** nothing in the repository's A2A surface. A full draft of #23 was written — the URI, a
+`required: false` declaration with `params.agent`, the envelope as a JSON string in
+`Message.metadata`, and activation through both `A2A-Extensions` and `Message.extensions` — and then
+reverted before commit. Issue #18, a reproducible `verifyEnvelope` bypass in which
+`clockSkewMs: Infinity` disabled the future-created check, outranks the A2A track under `pass.md` §2
+and D-2 rule 4, so the pass fixed that instead. The shape of the draft is recorded here; the full
+text is not in the repository.
+
+**Not done:** #23 remains open and unstarted. #24 and #25 are unchanged. The next A2A increment is
+to write the draft again, carrying in the questions it raised: A2A retries versus COB's nonce
+uniqueness, what activates an envelope in a push notification, and how one Agent Card can name more
+than one COB identity.

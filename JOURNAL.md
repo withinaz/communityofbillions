@@ -57,8 +57,8 @@ Gate 3 `examples/two-agents/run.js` **19/19 expectations held**.
   `validUntil`, and `validatePaymentReceipt` accepts any string as `settledAt`. `assertInstant`
   already exists and is not used at either point.
 - The A2A draft is **not** in the repository. #23 remains open and unstarted; the draft was reverted
-  rather than landed as a second increment, and it is not recoverable from the repository. A future
-  pass must write it again. `docs/a2a.md` and `README.md` are unchanged.
+  rather than landed as a second increment. A future pass must write it again. `docs/a2a.md` §9
+  records the reverted attempt and why; `README.md` is unchanged.
 - `git pull --rebase` still fails in this sandbox (`schannel: SEC_E_NO_CREDENTIALS`), and so does
   `git push` with the same error. The commit is local; the runner must push it. `git status` was
   clean at the start and `HEAD` was `3023196`.
