@@ -11,6 +11,64 @@ Rules for this file:
 
 ---
 
+## 2026-10-22 — a verifier option that could switch off the future check
+
+**Attempted:** at first, the wrong thing. No dated directive names this pass, so I read the priority
+order and the last entry, which named `cob.a2a` (#23) as the next step. I wrote a 400-line draft of
+the extension — `Message.metadata`, `params.agent`, activation through `A2A-Extensions` — and
+updated `docs/a2a.md`, `README.md` and `CHANGELOG.md` for it. Then I re-read §2 before committing
+and found issue #18: an open, reproducible verifier bypass. The brief puts a reproducible bug ahead
+of the A2A track, and D-2 says a real bug still takes priority. The draft was reverted — the new file
+removed, the three edited files restored — and the pass fixed #18 instead. The mistake was taking
+the previous entry's "Next" line as the plan without checking the open bug list against the priority
+order.
+
+**What was wrong:** `verifyEnvelope` destructured `clockSkewMs` and used it raw in
+`created > now + clockSkewMs`. For `Infinity` and `NaN` that comparison is false for every
+`created`, so the future-created check never fired and an envelope dated arbitrarily far ahead
+verified. A huge finite value did the same in practice, and a negative value or a numeric string
+changed the comparison in ways the caller did not ask for. The specification already caps the skew
+allowance at five minutes; the code did not enforce the cap.
+
+**Landed:**
+
+- `packages/core/src/envelope.js` exports `MAX_CLOCK_SKEW_MS = 300_000` and `verifyEnvelope` now
+  refuses a `clockSkewMs` that is not a finite number in `[0, MAX_CLOCK_SKEW_MS]` with
+  `COB_VALIDATION`. The guard runs before the envelope is examined, next to the existing invalid-`now`
+  guard, because both are options that can silently disable a clock check.
+- `packages/core/src/index.js` exports the constant, so a caller can name the bound rather than copy
+  the literal.
+- Three new tests in `packages/core/test/envelope.test.js`: the invalid values (`Infinity`,
+  `-Infinity`, `NaN`, `-1`, `MAX + 1`, `'30000'`) are each refused with the expected message and
+  `checkEnvelope` reports `COB_VALIDATION`; `0` and `MAX` are accepted; an envelope six minutes in
+  the future is still rejected at the maximum skew. The core suite goes from 181 to **184 pass / 0
+  fail**.
+- `CHANGELOG.md` records the tightening as a fixed input.
+
+**Gate results:** Gate 1 `node --check` passed for `envelope.js`, `index.js` and
+`envelope.test.js`. Gate 2 as written, `node --test "packages/core/**/*.test.js"`, still fails in
+this sandbox with `spawn EPERM` — the runner spawns a child per file and the pipe is denied. It was
+run as `node --test --test-isolation=none`, the same files and assertions: **184 pass / 0 fail**.
+Gate 3 `examples/two-agents/run.js` **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- Issue #19 is the same class and remains open: `validatePaymentRequest` accepts any string as
+  `validUntil`, and `validatePaymentReceipt` accepts any string as `settledAt`. `assertInstant`
+  already exists and is not used at either point.
+- The A2A draft is **not** in the repository. #23 remains open and unstarted; the draft was reverted
+  rather than landed as a second increment, and it is not recoverable from the repository. A future
+  pass must write it again. `docs/a2a.md` and `README.md` are unchanged.
+- `git pull --rebase` still fails in this sandbox (`schannel: SEC_E_NO_CREDENTIALS`), and so does
+  `git push` with the same error. The commit is local; the runner must push it. `git status` was
+  clean at the start and `HEAD` was `3023196`.
+- PR #17 and PR #15 remain open and unreviewed. #18 was not blocked on either.
+
+**Next:** #19 — validate `validUntil` and `settledAt` with `assertInstant` and add the two tests.
+After that, #23.
+
+---
+
 ## 2026-10-20 — the pass was failing on a credential it was never given
 
 **Attempted:** find out why the 08:40 pass stopped after 47 seconds with

@@ -54,6 +54,12 @@ documented specification revision.
   valid — reachable from `cob verify --now <typo>`. The option is now refused with
   `COB_VALIDATION`. This tightens an input: any caller that passed an invalid `now` was silently
   accepting expired envelopes.
+- **`verifyEnvelope` refuses a `clockSkewMs` outside `[0, 300000]`.** `Infinity`, `NaN`, a negative
+  allowance, or anything above five minutes made the future-created check false for every
+  timestamp, silently disabling it. The option is now refused with `COB_VALIDATION`, and
+  `MAX_CLOCK_SKEW_MS` is exported so callers can name the bound instead of copying it. This tightens
+  an input: a caller that passed an over-large or non-finite skew was accepting envelopes created
+  arbitrarily far in the future (issue #18).
 - **The scheduled task did not run.** Its action was `pwsh.exe`, which resolves to a **0-byte app
   execution alias** when PowerShell 7 comes from the Microsoft Store. Task Scheduler accepts the
   registration, reports the task as Ready, fires it on schedule, and then fails in milliseconds

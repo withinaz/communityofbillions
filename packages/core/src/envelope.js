@@ -69,6 +69,15 @@ export const MAX_TTL_SECONDS = 86_400;
 /** Default validity window, in seconds. Short by design: envelopes are not documents. */
 export const DEFAULT_TTL_SECONDS = 300;
 
+/**
+ * Longest clock-skew allowance a verifier will accept, in milliseconds.
+ *
+ * COB/1 §5 caps the allowance at five minutes. The cap is a security bound, not a suggestion: a
+ * non-finite or very large value makes the future-created check false for any timestamp, which
+ * silently disables it. {@link verifyEnvelope} validates the option against this value.
+ */
+export const MAX_CLOCK_SKEW_MS = 300_000;
+
 /** Strict RFC 3339 UTC instant, millisecond precision optional. */
 const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
@@ -288,6 +297,10 @@ export function validateStructure(envelope) {
 /**
  * Verify an envelope completely: structure, signature, clock, and addressee.
  *
+ * `clockSkewMs` is itself validated. A non-finite value, a negative one, or one above
+ * {@link MAX_CLOCK_SKEW_MS} is refused, because any of them can make the future-created check
+ * stop meaning anything.
+ *
  * @param {unknown} envelope
  * @param {{
  *   now?: Date,
@@ -306,6 +319,17 @@ export function verifyEnvelope(envelope, options = {}) {
   // downgrade, and one the CLI's `--now` flag can produce from a typo. Fail closed on the option.
   if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
     throw new ValidationError('now must be a valid Date', { now: String(now) });
+  }
+
+  // The same failure mode, one option over: `created > now + Infinity` is false for every
+  // timestamp, so an over-large allowance disables the future check rather than loosening it.
+  // The specification caps the allowance at five minutes; enforce the cap on the option itself,
+  // before the envelope is even examined.
+  if (!Number.isFinite(clockSkewMs) || clockSkewMs < 0 || clockSkewMs > MAX_CLOCK_SKEW_MS) {
+    throw new ValidationError(
+      `clockSkewMs must be a finite number in [0, ${MAX_CLOCK_SKEW_MS}]`,
+      { clockSkewMs, max: MAX_CLOCK_SKEW_MS },
+    );
   }
 
   const e = validateStructure(envelope);

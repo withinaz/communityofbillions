@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { ExpiredError, SignatureError, ValidationError } from '../src/errors.js';
 import {
   COB_VERSION,
+  MAX_CLOCK_SKEW_MS,
   MAX_TTL_SECONDS,
   checkEnvelope,
   createEnvelope,
@@ -181,6 +182,52 @@ describe('verifyEnvelope', () => {
   it('tolerates a small clock difference', () => {
     const e = envelope({ now: new Date(Date.now() + 5_000) });
     assert.doesNotThrow(() => verifyEnvelope(e, { clockSkewMs: 30_000 }));
+  });
+
+  it('refuses a clockSkewMs that could disable the future check', () => {
+    // `Infinity` and `NaN` make `created > now + clockSkewMs` false for every timestamp, and a
+    // huge finite value does the same in practice. The spec caps the allowance at five minutes;
+    // reject the option itself rather than letting a typo weaken the verifier.
+    const e = envelope();
+    const invalid = [
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.NaN,
+      -1,
+      MAX_CLOCK_SKEW_MS + 1,
+      '30000',
+    ];
+
+    for (const clockSkewMs of invalid) {
+      assert.throws(
+        () => verifyEnvelope(e, { clockSkewMs: /** @type {any} */ (clockSkewMs) }),
+        (error) =>
+          error instanceof ValidationError &&
+          /clockSkewMs must be a finite number/.test(error.message),
+        `expected clockSkewMs=${String(clockSkewMs)} to be refused`,
+      );
+    }
+
+    const result = checkEnvelope(e, { clockSkewMs: Number.POSITIVE_INFINITY });
+    assert.equal(result.valid, false);
+    assert.equal(/** @type {any} */ (result).code, 'COB_VALIDATION');
+  });
+
+  it('accepts the documented clock-skew bounds', () => {
+    assert.doesNotThrow(() => verifyEnvelope(envelope(), { clockSkewMs: 0 }));
+    assert.doesNotThrow(() => verifyEnvelope(envelope(), { clockSkewMs: MAX_CLOCK_SKEW_MS }));
+
+    // The bound is inclusive: five minutes of skew accepts an envelope created four minutes early.
+    const future = envelope({ now: new Date(Date.now() + 4 * 60_000) });
+    assert.doesNotThrow(() => verifyEnvelope(future, { clockSkewMs: MAX_CLOCK_SKEW_MS }));
+  });
+
+  it('still rejects a future envelope at the maximum skew', () => {
+    const e = envelope({ now: new Date(Date.now() + 6 * 60_000) });
+    assert.throws(
+      () => verifyEnvelope(e, { clockSkewMs: MAX_CLOCK_SKEW_MS }),
+      (error) => error instanceof ExpiredError && /future/.test(error.message),
+    );
   });
 
   it('refuses an invalid `now` instead of skipping the expiry check', () => {

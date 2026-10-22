@@ -61,6 +61,7 @@ export {
   SIGNED_FIELDS,
   DEFAULT_TTL_SECONDS,
   MAX_TTL_SECONDS,
+  MAX_CLOCK_SKEW_MS,
   assertInstant,
   assertMessageType,
   signingPayload,
