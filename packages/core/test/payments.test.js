@@ -121,6 +121,23 @@ describe('payment requests', () => {
     assert.throws(() => requestBody({ invoiceId: '' }), ValidationError);
   });
 
+  it('accepts an explicit RFC 3339 validUntil and returns it unchanged', () => {
+    // §8.2 allows millisecond precision to be omitted; the value is part of the signed body,
+    // so validation must not rewrite it.
+    const body = { ...requestBody(), validUntil: '2026-09-28T12:00:00Z' };
+    assert.equal(validatePaymentRequest(body).validUntil, '2026-09-28T12:00:00Z');
+  });
+
+  it('refuses a validUntil that is not an RFC 3339 UTC instant', () => {
+    for (const bad of ['not-a-date', '2026-09-28', '2026-09-28T12:00:00+01:00', '2026-13-01T00:00:00Z']) {
+      assert.throws(
+        () => validatePaymentRequest({ ...requestBody(), validUntil: bad }),
+        (error) => error instanceof ValidationError && error.code === 'COB_VALIDATION',
+        bad,
+      );
+    }
+  });
+
   it('reports the resolved decimals, network, and chain id', () => {
     const validated = validatePaymentRequest(requestBody());
     assert.equal(validated.decimals, 6);
@@ -186,6 +203,16 @@ describe('validatePaymentReceipt', () => {
   it('accepts a receipt with no block number yet', () => {
     const validated = validatePaymentReceipt(receiptBody({ blockNumber: null }));
     assert.equal(validated.blockNumber, null);
+  });
+
+  it('rejects a settledAt that is not an RFC 3339 UTC instant', () => {
+    for (const bad of ['yesterday', '2026-09-28', '2026-09-28T12:00:00+01:00', '2026-13-01T00:00:00Z']) {
+      assert.throws(
+        () => validatePaymentReceipt(receiptBody({ settledAt: bad })),
+        (error) => error instanceof ValidationError && error.code === 'COB_VALIDATION',
+        bad,
+      );
+    }
   });
 
   it('rejects a negative block number', () => {

@@ -49,6 +49,13 @@ documented specification revision.
 
 ### Fixed
 
+- **`validatePaymentRequest` and `validatePaymentReceipt` now parse their timestamps.** `validUntil`
+  and `settledAt` were required to be non-empty strings and nothing more, so
+  `validatePaymentRequest({ ..., validUntil: 'not-a-date' })` was accepted — and those functions are
+  exactly what a receiver calls on a message it did not produce. Both fields are now checked with
+  `assertInstant` and refused with `COB_VALIDATION` unless they are RFC 3339 UTC instants, as
+  `spec/COB-1.md` §8.2 and §8.3 already required. This tightens an input: a sender that put an
+  arbitrary string in either field was producing a message receivers accepted (issue #19).
 - **`verifyEnvelope` no longer skips the clock checks when `now` is not a real instant.** An
   invalid `Date` made every comparison against it false, so an *expired* envelope verified as
   valid — reachable from `cob verify --now <typo>`. The option is now refused with

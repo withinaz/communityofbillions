@@ -19,7 +19,7 @@ import {
   formatBaseUnits,
   parseAmountToBaseUnits,
 } from './amount.js';
-import { createEnvelope } from './envelope.js';
+import { assertInstant, createEnvelope } from './envelope.js';
 import { StateError, ValidationError } from './errors.js';
 import { assertPaymentAllowed, explorerTxUrl, resolveChain } from './policy.js';
 
@@ -102,9 +102,13 @@ export function validatePaymentRequest(body, options = {}) {
     ? null
     : requireString(body.memo, 'memo', 512);
 
+  // §8.2: validUntil bounds how long the payer should treat the invoice as live, and a
+  // receiver applies it to a value the sender chose. Parsing it here means `new Date(...)`
+  // in a receiver can never be handed an arbitrary string.
   const validUntil = body.validUntil === undefined
     ? new Date(now.getTime() + 900_000).toISOString()
     : /** @type {string} */ (body.validUntil);
+  assertInstant(validUntil, 'validUntil');
 
   return {
     invoiceId,
@@ -209,6 +213,9 @@ export function validatePaymentReceipt(body) {
   const payer = requireString(body.payer, 'payer', 128);
   const payee = requireString(body.payee, 'payee', 128);
   const settledAt = requireString(body.settledAt, 'settledAt', 64);
+  // §8.3: settledAt is a required instant, not free text. A receipt is a claim (§8.3), but
+  // a malformed claim should not reach a consumer that assumes the field parses.
+  assertInstant(settledAt, 'settledAt');
 
   const blockNumber = body.blockNumber === undefined || body.blockNumber === null
     ? null

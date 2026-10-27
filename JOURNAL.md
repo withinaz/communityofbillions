@@ -11,6 +11,60 @@ Rules for this file:
 
 ---
 
+## 2026-10-27 — an invoice deadline that any string could satisfy
+
+**Attempted:** issue #19, which the previous entry named as the next increment and which the brief's
+priority order puts ahead of the A2A track because it is a reproducible bug. Reading the two
+validators confirmed the gap: `validatePaymentRequest` passed `validUntil` through untouched and
+`validatePaymentReceipt` only length-checked `settledAt`. That was then reproduced against the
+pre-fix source after writing the tests: the two new refusal tests fail there (48 pass / 2 fail),
+which is the reproduction the issue asked for. The problem is not the producers —
+`createPaymentRequestBody` and `createPaymentReceiptBody` always compute well-formed instants — but
+the validators, which are exactly what a receiver calls on a message it did not produce.
+
+**Landed:**
+
+- `packages/core/src/payments.js` now calls the existing `assertInstant` on `validUntil` and on
+  `settledAt`. The functions were already in `envelope.js` and exported from `index.js`; this is a
+  reuse, not a new validator. `validUntil` remains returned exactly as sent — it is part of the
+  signed body, so validation must not rewrite it — and the spec's optional milliseconds still work.
+- Three tests in `packages/core/test/payments.test.js`. The two refusal tests fail against the old
+  code: an explicit `validUntil` or `settledAt` in one of four bad shapes (`not-a-date`, a date with
+  no time, a non-UTC offset, and a shape-valid but non-existent date) must be refused with
+  `COB_VALIDATION`. The third pins the accepted form — an explicit `validUntil` with no milliseconds
+  is accepted and returned unchanged — so the fix cannot over-tighten the spec's optional precision.
+  The core suite goes from 184 to **187 pass / 0 fail**.
+- `CHANGELOG.md` records the tightening under `Fixed`. No specification edit was needed: §8.2 and
+  §8.3 already said **MUST** be RFC 3339 UTC instants, so the code was the side that disagreed.
+
+**Gate results:** Gate 1 `node --check` passed for `payments.js` and `payments.test.js`. Gate 2 as
+written, `node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`
+— the runner spawns a child per file and the pipe is denied. It was run as
+`node --test --test-isolation=none`, the same files and assertions: **187 pass / 0 fail**. Gate 3
+`examples/two-agents/run.js` **19/19 expectations held**; the mainnet refusal now reports
+`allowMainnet=false`, which is the policy lock from #7, not this change.
+
+**Still broken / not done:**
+
+- `validUntil` is now a real instant but is not checked against `now`. An invoice dated in the past
+  still validates. The spec does not require an ordering check and #19 did not ask for one; if it
+  should exist, that is a separate issue and a separate increment.
+- Issue #23 (`cob.a2a`) remains open and unstarted. Issue #26 (the pass sandbox cannot write the
+  LinkedIn drafts queue) remains open; this pass did not touch A2A, so it produced no draft.
+- `git pull --rebase` and `git push` still fail in this sandbox (`schannel:
+  SEC_E_NO_CREDENTIALS`); the commit is local and the runner must push it. `git status` was clean at
+  the start and `HEAD` was `7d7608d`. Issue #19 was closed with a comment naming this commit; the
+  reference only resolves once the runner's push lands.
+- The project board needs an explicit `--owner` when not running interactively; `gh project
+  item-list` without it fails with `owner is required`. Once supplied, item #19 was already in
+  `Done` after the issue was closed, so no move was needed.
+
+**Next:** #23 — draft `cob.a2a` as the A2A extension, starting from what `docs/a2a.md` has already
+recorded rather than re-deriving the design. If a dated directive or a new reproducible bug arrives
+first, that wins.
+
+---
+
 ## 2026-10-22 — a verifier option that could switch off the future check
 
 **Attempted:** at first, the wrong thing. No dated directive names this pass, so I read the priority
