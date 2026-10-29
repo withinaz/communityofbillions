@@ -190,8 +190,9 @@ A message **MAY** carry `Message.metadata["cob.payment.status"]` with one of the
 - The replay key is `(from, nonce)`, as in COB/1 §7. It is scoped to the **COB identity**, not to an
   A2A task or context. The same envelope replayed in a new task, a new context, or a new transport
   is still a replay and **MUST** be refused while its pair is retained.
-- A2A retries deliver the same `Message` again. A retry of an envelope is a duplicate, not a new
-  payment request; the receiver **MUST** apply the replay rule rather than acting twice.
+- A retry at the transport or client level may deliver the same `Message` again. A retry of an
+  envelope is a duplicate, not a new payment request; the receiver **MUST** apply the replay rule
+  rather than acting twice.
 - A2A's `messageId` and COB/1's `id` are independent identifiers. Neither **MUST** be derived from
   the other or checked against it.
 - An A2A task may outlive the envelope. COB/1 expiry still applies; a task in progress does not
