@@ -51,6 +51,12 @@ files and assertions were run as `node --test --test-isolation=none "packages/co
 - #24 (Agent Card discovery) and #25 (x402) are untouched. #26 (the sandbox cannot write the drafts
   queue) remains open and is still not a pass decision. #28 (a Nano settle rail) is a real proposal
   and was not answered this pass; it needs a design decision, not an implementation.
+- The D-3 LinkedIn draft could not be written. This pass touched A2A, so D-3 requires one in
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`; that path is outside the
+  session workspace and the write was refused with `[sandbox: file access denied under
+  workspace-write mode]`. The draft was composed and then deliberately not committed or copied into
+  the repository, following the precedent issue #26 records. Issue #26 is commented with this
+  recurrence; until the sandbox or runner changes, no unattended A2A pass can satisfy D-3.
 - The extension URI is an identifier that does not resolve to a document. The draft says so plainly;
   hosting it is a future pass and not a claim being made now.
 - `git pull --rebase` and `git push` still fail in this sandbox (`schannel:
