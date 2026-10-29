@@ -11,6 +11,59 @@ Rules for this file:
 
 ---
 
+## 2026-10-29 — `cob.a2a` drafted: the envelope moves into A2A metadata
+
+**Attempted:** issue #23, the next A2A step in `docs/a2a.md` §7 and the increment the last entry
+named. No dated directive names this pass, and there was no reproducible bug to take ahead of it:
+#26 is the runner/sandbox decision it already says it is, and #28 is a settlement-rail proposal, not
+something a maintenance pass should decide. The brief prefers the A2A track when there is a
+reasonable next step, and #23 was exactly that.
+
+**Read:** A2A's extensions documentation — declaration, `required`, activation, versioning, the
+`A2A-Extensions` header — and `a2aproject/A2A` `main`'s `specification/a2a.proto` for the fields the
+draft relies on: `AgentExtension`, `Message.metadata`, `Message.extensions`, and the metadata maps on
+`Task`, `TaskStatusUpdateEvent` and `Artifact`. These were read first-hand this pass; the notes in
+`docs/a2a.md` are cited where they, not this pass, did the reading.
+
+**Landed:**
+
+- `spec/COB-A2A.md` — a draft of the extension, written normatively but explicitly not stable. It
+  fixes the URI `…/a2a/cob/v1`, a `required: false` declaration whose `params.agent` is the COB
+  identity the endpoint speaks for, `Message.metadata["cob.envelope"]` as the envelope **object**,
+  the requirement that `Message.extensions` list the URI, activation through `A2A-Extensions` with an
+  echo rule the client must check, and a `cob.payment.status` substate that is an annotation only.
+  It adds no A2A task state and no enum value.
+- `docs/a2a.md` §7.3 is marked drafted and §9 gains this pass's dated entry. `CHANGELOG.md` records
+  the new file. `ROADMAP.md` moves #23 from 🗓 to 🚧 — not ✅, because there is still no
+  implementation and no test.
+- Issue #29 opened for the adapter and its tests, so closing #23 does not lose the next step.
+
+**Gate results:** Gate 1 had nothing to check — no `.js` file changed. Gate 2 as written,
+`node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`; the same
+files and assertions were run as `node --test --test-isolation=none "packages/core/test/*.test.js"`,
+**187 pass / 0 fail**. Gate 3 `examples/two-agents/run.js` **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- The draft has no implementation and no conformance vector. Until #29 lands, it is prose, and prose
+  is not a protocol. The three rules most likely to move when code arrives are the `to` check, the
+  `Message.extensions` requirement, and the echo rule.
+- #24 (Agent Card discovery) and #25 (x402) are untouched. #26 (the sandbox cannot write the drafts
+  queue) remains open and is still not a pass decision. #28 (a Nano settle rail) is a real proposal
+  and was not answered this pass; it needs a design decision, not an implementation.
+- The extension URI is an identifier that does not resolve to a document. The draft says so plainly;
+  hosting it is a future pass and not a claim being made now.
+- `git pull --rebase` and `git push` still fail in this sandbox (`schannel:
+  SEC_E_NO_CREDENTIALS`); the commit is local and the runner must push it. `git status` was clean at
+  the start and `HEAD` was `ef43b91`. Issue #23 is closed with a comment naming this commit; the
+  reference only resolves once the runner's push lands.
+
+**Next:** #29 — implement the declaration and metadata adapter in `packages/core`, with tests for
+the `to` check, the `Message.extensions` requirement, and the echo rule. If a reproducible bug
+arrives first, it still wins.
+
+---
+
 ## 2026-10-27 — an invoice deadline that any string could satisfy
 
 **Attempted:** issue #19, which the previous entry named as the next increment and which the brief's

@@ -21,6 +21,11 @@ documented specification revision.
 
 ### Added
 
+- **`spec/COB-A2A.md`** — draft specification for `cob.a2a`, carrying a COB/1 envelope in an A2A
+  message. It defines the extension URI, the Agent Card declaration and `params.agent` binding, the
+  `metadata["cob.envelope"]` placement, the `A2A-Extensions` activation and echo rule, and a
+  non-authoritative `cob.payment.status` substate. Specification only: no implementation and no
+  conformance vectors, so it is not a stable surface yet.
 - **`allowUnlimited` policy field**, default `true`. It names the absence of a spending ceiling:
   with `maxAmount` empty, an amount is uncapped on any chain the policy allows. Today's behaviour
   is unchanged; the flag exists so that unbounded spending can require a visible act once the

@@ -344,7 +344,10 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
    `packages/core/test/canonical.test.js`). §8.4.1's field-presence rule is not canonicalisation and
    is not ours to implement; the comparison is in §5.
 3. **Draft `cob.a2a` as an A2A extension**: URI, `AgentExtension` declaration, where COB/1 data lives
-   in `metadata`, and what activation means. Specification first, code later.
+   in `metadata`, and what activation means. Specification first, code later. **Draft written** on
+   2026-10-29: [`spec/COB-A2A.md`](../spec/COB-A2A.md). It fixes the URI, the `params.agent` binding,
+   `metadata["cob.envelope"]`, the echo rule for activation, and the payment substate. No
+   implementation or test vectors yet.
 4. **Agent Card discovery.** Decide whether the planned `.well-known/cob.json` (issue #1) becomes an
    Agent Card, or is dropped in favour of one.
 5. **Settlement.** Decide the relationship to x402 — implement it, interoperate with it, or document
@@ -521,3 +524,41 @@ text is not in the repository.
 to write the draft again, carrying in the questions it raised: A2A retries versus COB's nonce
 uniqueness, what activates an envelope in a push notification, and how one Agent Card can name more
 than one COB identity.
+
+### 2026-10-29 — `cob.a2a` drafted; the envelope moves in metadata
+
+**Read:** A2A's extensions documentation (declaration, `required`, activation, versioning, the
+`A2A-Extensions` header) and `a2aproject/A2A` `main`'s `specification/a2a.proto`, for the exact fields
+this draft relies on: `AgentExtension`, `Message.metadata`, `Message.extensions`, and the metadata
+maps on `Task`, `TaskStatusUpdateEvent`, and `Artifact`. Nothing about A2A below is second-hand.
+
+**Changed:** new [`spec/COB-A2A.md`](../spec/COB-A2A.md), a draft of #23. It defines the extension URI
+`…/a2a/cob/v1`, a `required: false` declaration whose `params.agent` is the COB identity the endpoint
+speaks for, `Message.metadata["cob.envelope"]` as the envelope object, the requirement that
+`Message.extensions` list the URI, and activation through `A2A-Extensions` with an echo rule. It adds
+no A2A task state; `cob.payment.status` is a non-authoritative annotation for the COB/1 §8.5 states.
+§7.3 above is marked drafted, `CHANGELOG.md` records the new file, and `ROADMAP.md` moves #23 to 🚧 —
+not ✅, because there is still no implementation and no test.
+
+**Decisions worth naming.** The envelope is carried as an object rather than the JSON string the
+reverted 2026-10-22 sketch used: COB/1 signs the canonical form of the value, not the bytes as they
+were serialised, and A2A's `metadata` is already a JSON object. `required` is `false` because an
+agent that does not understand COB/1 must still be able to talk A2A; the cost is that a server can
+silently ignore a payment request, so the client's signal is the response echoing the URI. Replay is
+scoped to the COB identity, not to an A2A task, because A2A retries must not turn one envelope into
+two payments.
+
+**The uncomfortable parts, recorded rather than smoothed over.** `cob.payment.status` is ordinary
+metadata: it is not signed and cannot be used to settle. The extension authenticates nothing about
+the A2A endpoint; a valid envelope from an unknown key is still a valid envelope from an unknown key.
+And the extension carries a receipt, which is still a claim (T11) — it is not a settlement rail, and
+issue #25 remains the place where that is decided.
+
+**Not done:** there is no implementation and no conformance vector, so the draft is not a stable
+surface. #24 (Agent Card discovery) and #25 (x402) are untouched. The open questions in §10 are real:
+one Agent Card cannot name several COB identities, activation on a push notification is undefined,
+and a receipt might belong in `Artifact.metadata` rather than a `Message`.
+
+**Next:** make the draft concrete with a small adapter in `packages/core` that builds and reads the
+declaration and the metadata envelope, with tests for the `to` check, the `Message.extensions`
+requirement, and the echo rule. If a reproducible bug arrives first, it still wins.
