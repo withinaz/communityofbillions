@@ -11,6 +11,71 @@ Rules for this file:
 
 ---
 
+## 2026-11-03 — `cob.a2a` adapter: the declaration and metadata, tested
+
+**Attempted:** issue #29, the next A2A step named by the last entry and `docs/a2a.md` §7. No dated
+directive names this pass. I checked the open issues before taking it: #26 is a sandbox limitation,
+#28 is a settlement-rail proposal that needs a design decision, and #24/#25/#20 are decision issues;
+none is a reproducible bug. #29 was scoped to one pass and implementable without a decision.
+
+**Read:** `spec/COB-A2A.md` and `packages/core/src/envelope.js`, because the adapter must reuse the
+existing verification rather than restate it. No new external specification was read this pass;
+nothing below is a new claim about A2A.
+
+**Landed:**
+
+- `packages/core/src/a2a.js`, exported from the package entry point. `createCobExtension(agent)`
+  builds the §4 declaration and refuses a `params.agent` that is not `cob:agent:…`.
+  `validateCobExtension(extension)` reads a received declaration and refuses `required: true`; an
+  absent `required` is accepted as `false`, because A2A declarations are proto3 messages where a
+  default-false boolean has no presence. `attachCobEnvelope(message, envelope)` structurally checks
+  the envelope, puts it at `metadata["cob.envelope"]`, and adds the URI to `extensions` without
+  duplicating it or mutating the message. `readCobEnvelope(message, { agent, … })` refuses an
+  envelope whose message does not list the URI, verifies the envelope (structure, signature, clock),
+  and checks `to` against the receiver's own `params.agent`.
+- `packages/core/test/a2a.test.js` — **19 tests**. They cover the four acceptance cases (`required:
+  true`, a non-COB `params.agent`, a missing `Message.extensions` entry, a `to` mismatch), plus a
+  tampered signature, an expired envelope, an absent `required`, unknown `params` keys, and the
+  annotation rule: `cob.payment.status: "settled"` does not turn a missing or tampered envelope into
+  a valid one.
+- `spec/COB-A2A.md` no longer says it has no implementation; §4 records the absent-`required` reading.
+  No normative change. `docs/a2a.md` §7.3 is updated and §9 gains this pass's entry. `CHANGELOG.md`
+  records the adapter, and `ROADMAP.md` links it while staying 🚧 — activation/echo is unimplemented
+  and there are no conformance vectors.
+
+**Gate results:** Gate 1 `node --check` passed for the three changed `.js` files. Gate 2 as written,
+`node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`; the same
+files were run as `node --test --test-isolation=none "packages/core/test/*.test.js"`, **206 pass / 0
+fail** (187 before this pass). Gate 3 `examples/two-agents/run.js` — **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- Activation and the echo rule (§6) are not implemented. They need an HTTP request header and a
+  response header, and this package has no transport. Until then a server can silently ignore a
+  payment request and the client has no adapter-level signal that it did. That is the draft's own
+  "silent non-processing" failure mode, and it is still open.
+- There is no conformance vector, so another implementation still cannot check its declaration and
+  metadata against this one. The draft remains a draft.
+- #24 (Agent Card discovery), #25 (x402), and #20 (compose-or-compete) are untouched. They are
+  decision issues, not work a maintenance pass should decide.
+- The D-3 LinkedIn draft could not be written. This pass touched A2A, so one belongs in
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`; that path is outside the
+  session workspace and the write was refused with `[sandbox: file access denied under
+  workspace-write mode]`. The draft was composed and deliberately not committed or copied into the
+  repository. Issue #26 is commented with this recurrence. The same limitation that blocked the
+  2026-10-29 draft blocked this one.
+- `git pull --rebase` and `git push` still fail in this sandbox (`schannel:
+  SEC_E_NO_CREDENTIALS`); the commit is local and the runner must push it. `git status` was clean at
+  the start and `HEAD` was `9b30b67`. Issue #29 is closed with a comment naming this commit; the
+  reference only resolves once the runner's push lands.
+- The project board needs an explicit `--owner` when not running interactively; `gh project
+  item-list` without it fails with `owner is required`.
+
+**Next:** an activation/echo helper attached to the first transport binding (#3), or a conformance
+vector for the declaration-and-metadata surface that now exists. A reproducible bug still wins.
+
+---
+
 ## 2026-10-29 — `cob.a2a` drafted: the envelope moves into A2A metadata
 
 **Attempted:** issue #23, the next A2A step in `docs/a2a.md` §7 and the increment the last entry

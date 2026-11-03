@@ -89,6 +89,17 @@ export {
 } from './policy.js';
 
 export {
+  A2A_EXTENSION_URI,
+  A2A_EXTENSION_DESCRIPTION,
+  A2A_ENVELOPE_KEY,
+  A2A_PAYMENT_STATUS_KEY,
+  createCobExtension,
+  validateCobExtension,
+  attachCobEnvelope,
+  readCobEnvelope,
+} from './a2a.js';
+
+export {
   PAYMENT_STATES,
   PAYMENT_TRANSITIONS,
   Payment,

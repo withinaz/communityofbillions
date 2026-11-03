@@ -1,7 +1,7 @@
 # `cob.a2a` — the COB/1 envelope as an A2A extension
 
 **Version:** 0.1 (draft)
-**Status:** 🚧 Draft — specification only; no implementation and no conformance vectors
+**Status:** 🚧 Draft — reference adapter in `packages/core`; no conformance vectors, and activation (§6) is not implemented
 **Extension URI:** `https://github.com/withinaz/communityofbillions/a2a/cob/v1`
 **Licence:** CC-BY-4.0
 
@@ -21,9 +21,10 @@ question recorded as issue [#25](https://github.com/withinaz/communityofbillions
 
 This is a **draft**. It is written normatively — `MUST` and `SHOULD` mean what
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) says — because an implementer needs something
-exact to follow. It has no implementation and no test vectors. A change to any rule below is a
-breaking change and **MUST** use a new extension URI; a change to the envelope is COB/1's business,
-not this document's.
+exact to follow. The declaration and metadata placement in §4–§5 have a reference adapter with tests
+in `packages/core`; activation (§6) has none, and there are no conformance vectors. A change to any
+rule below is a breaking change and **MUST** use a new extension URI; a change to the envelope is
+COB/1's business, not this document's.
 
 The extension URI is an identifier, not an endpoint. Until the project has a documentation site, the
 canonical text of v1 is this file; the URI itself is not yet expected to resolve.
@@ -102,7 +103,8 @@ An agent that can process COB/1 envelopes adds one `AgentExtension` to
 
 - `required` **MUST** be `false`. An A2A participant that does not understand COB/1 must still be
   able to talk to this agent; marking the extension required would turn every ordinary message into
-  a negotiation failure.
+  a negotiation failure. In A2A's proto3 JSON a default-`false` boolean may be omitted, so an absent
+  `required` is read as `false`; a literal `true` is refused.
 - `params.agent` **MUST** be a well-formed COB agent id (COB/1 §2). It is the address an incoming
   envelope's `to` is checked against.
 - `params` **MAY** carry additional keys in a later revision. A v1 receiver **MUST** ignore keys it
@@ -250,6 +252,7 @@ being *displayed*.
 | Version | Date | Change |
 | --- | --- | --- |
 | 0.1 | 2026-10-29 | First draft. URI, Agent Card declaration, `metadata["cob.envelope"]`, activation and echo, payment substate, replay and security notes, open questions. |
+| 0.1 | 2026-11-03 | Reference adapter for §4–§5 in `packages/core`. Clarified that an absent `required` is read as `false` (proto3 JSON). No normative change. |
 
 ---
 

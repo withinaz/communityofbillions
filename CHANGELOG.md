@@ -21,6 +21,11 @@ documented specification revision.
 
 ### Added
 
+- **`cob.a2a` reference adapter** (`packages/core/src/a2a.js`) — builds and validates the
+  `AgentExtension` declaration from `spec/COB-A2A.md` §4, attaches a COB/1 envelope to an A2A
+  `Message` under `metadata["cob.envelope"]`, and reads it back with COB/1 verification, an
+  `extensions` URI check, and the receiver's `to` check. 19 tests. Activation and the echo rule are
+  not implemented; `cob.payment.status` is not read as evidence.
 - **`spec/COB-A2A.md`** — draft specification for `cob.a2a`, carrying a COB/1 envelope in an A2A
   message. It defines the extension URI, the Agent Card declaration and `params.agent` binding, the
   `metadata["cob.envelope"]` placement, the `A2A-Extensions` activation and echo rule, and a

@@ -346,8 +346,9 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
 3. **Draft `cob.a2a` as an A2A extension**: URI, `AgentExtension` declaration, where COB/1 data lives
    in `metadata`, and what activation means. Specification first, code later. **Draft written** on
    2026-10-29: [`spec/COB-A2A.md`](../spec/COB-A2A.md). It fixes the URI, the `params.agent` binding,
-   `metadata["cob.envelope"]`, the echo rule for activation, and the payment substate. No
-   implementation or test vectors yet.
+   `metadata["cob.envelope"]`, the echo rule for activation, and the payment substate. The
+   declaration and metadata adapter landed on 2026-11-03 (#29); activation/echo and conformance
+   vectors remain.
 4. **Agent Card discovery.** Decide whether the planned `.well-known/cob.json` (issue #1) becomes an
    Agent Card, or is dropped in favour of one.
 5. **Settlement.** Decide the relationship to x402 — implement it, interoperate with it, or document
@@ -562,3 +563,36 @@ and a receipt might belong in `Artifact.metadata` rather than a `Message`.
 **Next:** make the draft concrete with a small adapter in `packages/core` that builds and reads the
 declaration and the metadata envelope, with tests for the `to` check, the `Message.extensions`
 requirement, and the echo rule. If a reproducible bug arrives first, it still wins.
+
+### 2026-11-03 — the adapter: declaration and metadata, tested
+
+**Read:** the draft itself and `packages/core/src/envelope.js`, because the adapter's job is to reuse
+that verification rather than restate it. No new external specification was read this pass; nothing
+below is a new claim about A2A or AP2.
+
+**Changed:** new [`packages/core/src/a2a.js`](../packages/core/src/a2a.js), exported from the package
+entry point. `createCobExtension(agent)` builds the §4 declaration and refuses an agent id that is not
+`cob:agent:…`. `validateCobExtension(extension)` reads a received declaration and refuses
+`required: true`; an absent `required` is accepted as `false`, because A2A declarations are proto3
+messages where a default-false boolean has no presence. `attachCobEnvelope(message, envelope)` puts a
+structurally valid envelope at `metadata["cob.envelope"]` and adds the URI to `extensions` without
+duplicating it. `readCobEnvelope(message, { agent, … })` refuses a message that lists the envelope but
+not the URI, verifies the envelope (signature, clock, structure), and checks `to` against the
+receiver's own `params.agent`. 19 tests in `packages/core/test/a2a.test.js`.
+
+`spec/COB-A2A.md` no longer says it has no implementation; §4 now records the absent-`required`
+reading. `CHANGELOG.md` and `ROADMAP.md` are updated. Issue #29 is the source of the increment.
+
+**The uncomfortable part that did not move:** the adapter implements §4–§5 and nothing else.
+Activation (§6) is an HTTP request header and an echo on the response, so it has no home in a package
+with no transport, and it is not implemented. A client can still send a payment request that a server
+silently ignores; the adapter does not check the echo for it. There are no conformance vectors, so
+another implementation still cannot prove it agrees with this one. And a `cob.payment.receipt` remains
+a payee-signed claim (T11): `readCobEnvelope` verifies who signed it, not that a transfer happened.
+
+**Not done:** activation and echo; a conformance vector; #24 (Agent Card discovery) and #25 (x402)
+untouched; the §10 open questions are unchanged.
+
+**Next:** either an activation/echo helper attached to whichever transport binding lands first (#3), or
+a conformance vector for the declaration-and-metadata surface that now exists. If a reproducible bug
+arrives first, it still wins.
