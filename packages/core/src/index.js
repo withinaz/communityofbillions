@@ -93,10 +93,15 @@ export {
   A2A_EXTENSION_DESCRIPTION,
   A2A_ENVELOPE_KEY,
   A2A_PAYMENT_STATUS_KEY,
+  A2A_EXTENSIONS_HEADER,
   createCobExtension,
   validateCobExtension,
   attachCobEnvelope,
   readCobEnvelope,
+  parseA2AExtensions,
+  withCobActivation,
+  isCobExtensionActive,
+  assertCobExtensionEchoed,
 } from './a2a.js';
 
 export {

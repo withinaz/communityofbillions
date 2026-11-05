@@ -347,8 +347,9 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
    in `metadata`, and what activation means. Specification first, code later. **Draft written** on
    2026-10-29: [`spec/COB-A2A.md`](../spec/COB-A2A.md). It fixes the URI, the `params.agent` binding,
    `metadata["cob.envelope"]`, the echo rule for activation, and the payment substate. The
-   declaration and metadata adapter landed on 2026-11-03 (#29); activation/echo and conformance
-   vectors remain.
+   declaration and metadata adapter landed on 2026-11-03 (#29); the activation/echo header helpers
+   landed on 2026-11-05 (#30, partly). Attaching them to a transport, and conformance vectors,
+   remain.
 4. **Agent Card discovery.** Decide whether the planned `.well-known/cob.json` (issue #1) becomes an
    Agent Card, or is dropped in favour of one.
 5. **Settlement.** Decide the relationship to x402 — implement it, interoperate with it, or document
@@ -596,3 +597,33 @@ untouched; the §10 open questions are unchanged.
 **Next:** either an activation/echo helper attached to whichever transport binding lands first (#3), or
 a conformance vector for the declaration-and-metadata surface that now exists. If a reproducible bug
 arrives first, it still wins.
+
+### 2026-11-05 — activation and echo as header helpers, not yet wired to a transport
+
+**Read:** `spec/COB-A2A.md` §6 and the adapter from 2026-11-03. No external specification was read
+this pass, so nothing below is a new claim about A2A. The one A2A rule it relies on — extensions are
+inactive until a request names them in `A2A-Extensions` — comes from the 2026-10-29 reading.
+
+**Changed:** four header-value functions in `packages/core/src/a2a.js`, exported from the package
+entry point. `parseA2AExtensions` splits the comma-separated list; `withCobActivation` writes the
+request header without dropping other extensions; `isCobExtensionActive` applies §6.2's two
+conditions (the server's own declaration *and* the request header) and returns `false` when either is
+missing; `assertCobExtensionEchoed` applies §6.4 on the client. 17 new tests (223 total), including
+the two failures the issue named: an inactive envelope is not read as a payment request, and a
+payment request whose response does not echo the URI is not treated as delivered. `spec/COB-A2A.md`
+gains a non-normative implementation note and a change-log row; no rule changed, and the wire format
+did not change.
+
+**The uncomfortable part that did not move:** these helpers take header values, and nothing in this
+repository opens an HTTP connection, so no real exchange exercises them. Issue #30 stays open until
+the first transport binding (#3) attaches them. A2A's documentation and the x402 extension still
+disagree about the header name (`A2A-Extensions` versus `X-A2A-Extensions`); this draft follows A2A
+and records the discrepancy, and this pass did not resolve it. There are still no conformance
+vectors, and a `cob.payment.receipt` is still a payee-signed claim (T11), not settlement evidence.
+
+**Not done:** transport attachment (#3), conformance vectors, the #24/#25 decisions, and the §10
+open questions.
+
+**Next:** attach these helpers to the first transport binding and test one silent-ignore response end
+to end, or write a conformance vector for the declaration-and-metadata surface. A reproducible bug
+still wins.

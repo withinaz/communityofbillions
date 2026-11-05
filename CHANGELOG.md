@@ -24,13 +24,20 @@ documented specification revision.
 - **`cob.a2a` reference adapter** (`packages/core/src/a2a.js`) — builds and validates the
   `AgentExtension` declaration from `spec/COB-A2A.md` §4, attaches a COB/1 envelope to an A2A
   `Message` under `metadata["cob.envelope"]`, and reads it back with COB/1 verification, an
-  `extensions` URI check, and the receiver's `to` check. 19 tests. Activation and the echo rule are
-  not implemented; `cob.payment.status` is not read as evidence.
+  `extensions` URI check, and the receiver's `to` check. 19 tests. `cob.payment.status` is not read
+  as evidence.
+- **`cob.a2a` activation and echo helpers** — `parseA2AExtensions`, `withCobActivation`,
+  `isCobExtensionActive`, and `assertCobExtensionEchoed` in `packages/core`. They implement
+  `spec/COB-A2A.md` §6 for the `A2A-Extensions` request and response headers: a server processes an
+  envelope only when its Agent Card declares the extension and the request activates it, and a
+  client does not treat a payment request as delivered unless the response echoes the URI. 17 tests.
+  They are not attached to a transport yet.
 - **`spec/COB-A2A.md`** — draft specification for `cob.a2a`, carrying a COB/1 envelope in an A2A
   message. It defines the extension URI, the Agent Card declaration and `params.agent` binding, the
   `metadata["cob.envelope"]` placement, the `A2A-Extensions` activation and echo rule, and a
-  non-authoritative `cob.payment.status` substate. Specification only: no implementation and no
-  conformance vectors, so it is not a stable surface yet.
+  non-authoritative `cob.payment.status` substate. It has a reference adapter for the declaration,
+  metadata, and activation header; conformance vectors are still missing, so it is not a stable
+  surface yet.
 - **`allowUnlimited` policy field**, default `true`. It names the absence of a spending ceiling:
   with `maxAmount` empty, an amount is uncapped on any chain the policy allows. Today's behaviour
   is unchanged; the flag exists so that unbounded spending can require a visible act once the

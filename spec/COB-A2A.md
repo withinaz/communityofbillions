@@ -1,7 +1,7 @@
 # `cob.a2a` — the COB/1 envelope as an A2A extension
 
 **Version:** 0.1 (draft)
-**Status:** 🚧 Draft — reference adapter in `packages/core`; no conformance vectors, and activation (§6) is not implemented
+**Status:** 🚧 Draft — reference adapter in `packages/core` (declaration, metadata, and header activation); no conformance vectors, and no transport binding exercises §6 end to end
 **Extension URI:** `https://github.com/withinaz/communityofbillions/a2a/cob/v1`
 **Licence:** CC-BY-4.0
 
@@ -21,9 +21,10 @@ question recorded as issue [#25](https://github.com/withinaz/communityofbillions
 
 This is a **draft**. It is written normatively — `MUST` and `SHOULD` mean what
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) says — because an implementer needs something
-exact to follow. The declaration and metadata placement in §4–§5 have a reference adapter with tests
-in `packages/core`; activation (§6) has none, and there are no conformance vectors. A change to any
-rule below is a breaking change and **MUST** use a new extension URI; a change to the envelope is
+exact to follow. The declaration and metadata placement in §4–§5, and the header helpers for
+activation in §6, have a reference adapter with tests in `packages/core`. Nothing is attached to a
+transport yet, and there are no conformance vectors. A change to any rule below is a breaking change
+and **MUST** use a new extension URI; a change to the envelope is
 COB/1's business, not this document's.
 
 The extension URI is an identifier, not an endpoint. Until the project has a documentation site, the
@@ -167,6 +168,13 @@ The header name is `A2A-Extensions`, as in A2A's extensions documentation. The A
 §7 says `X-A2A-Extensions`; that discrepancy is recorded in `docs/a2a.md` §3 and is not resolved by
 this draft.
 
+**Reference implementation (non-normative).** `packages/core/src/a2a.js` covers rules 1–4 as
+header-value helpers: `withCobActivation` writes the request header, `isCobExtensionActive` decides
+activation from the request header plus the server's own declaration, and
+`assertCobExtensionEchoed` checks the response. They are not wired to a transport (issue
+[#3](https://github.com/withinaz/communityofbillions/issues/3)), so no end-to-end exchange proves
+them yet. Rule 5 is the absence of a fallback code path; a helper cannot enforce it by itself.
+
 ## 7. Payment substate
 
 A2A task states are A2A's. COB/1 payment states (COB/1 §8.5) are the payment's. This extension does
@@ -253,6 +261,7 @@ being *displayed*.
 | --- | --- | --- |
 | 0.1 | 2026-10-29 | First draft. URI, Agent Card declaration, `metadata["cob.envelope"]`, activation and echo, payment substate, replay and security notes, open questions. |
 | 0.1 | 2026-11-03 | Reference adapter for §4–§5 in `packages/core`. Clarified that an absent `required` is read as `false` (proto3 JSON). No normative change. |
+| 0.1 | 2026-11-05 | Header helpers for §6 activation and echo in `packages/core`; transport attachment pending. No normative change. |
 
 ---
 

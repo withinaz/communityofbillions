@@ -11,6 +11,66 @@ Rules for this file:
 
 ---
 
+## 2026-11-05 — `cob.a2a` activation and echo: header helpers, tested
+
+**Attempted:** issue #30, the next A2A step named by the last entry and `docs/a2a.md` §7. No dated
+directive names this pass. I checked the other open issues first: #26 is the sandbox/drafts decision,
+#28 is a settlement-rail proposal that needs a design decision, #24/#25/#20 are decision issues, and
+#14/#12 are unrelated good-first issues. No reproducible bug was waiting, so the A2A track was the
+increment.
+
+**Read:** `spec/COB-A2A.md` §6 and the adapter from 2026-11-03. No external specification was read
+this pass, so nothing below is a new claim about A2A; the activation rule comes from the 2026-10-29
+reading.
+
+**Landed:**
+
+- `packages/core/src/a2a.js`: `parseA2AExtensions`, `withCobActivation`, `isCobExtensionActive`, and
+  `assertCobExtensionEchoed`, exported from the entry point, plus the `A2A_EXTENSIONS_HEADER`
+  constant. `isCobExtensionActive` requires both the server's declaration and the request header;
+  `assertCobExtensionEchoed` throws a `ValidationError` saying the response did not echo the URI, so
+  the request is not treated as delivered.
+- `packages/core/test/a2a.test.js`: **17 new tests** (223 total, 206 before). They cover parsing
+  (commas, whitespace, empty entries, an absent header, a non-string), adding the URI without
+  duplication, the two-condition activation rule, the echo check, and two composed
+  transport-boundary fixtures for the issue's acceptance cases: an inactive envelope is not read as
+  a payment request, and a request whose response does not echo the URI is not delivered.
+- `spec/COB-A2A.md` gains a non-normative §6 implementation note and a change-log row. No rule
+  changed and the wire format did not change. `docs/a2a.md` §7.3 and §9 are updated, along with
+  `CHANGELOG.md` and the `ROADMAP.md` parenthetical (still 🚧).
+- Issue #30 is **not** closed. The helpers are not attached to a transport because #3 does not
+  exist; closing the issue would claim a part that is missing. A comment records what landed and
+  what remains.
+
+**Gate results:** Gate 1 `node --check` passed for the three changed `.js` files. Gate 2 as written,
+`node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`; the same
+files were run as `node --test --test-isolation=none "packages/core/test/*.test.js"`, **223 pass / 0
+fail**. Gate 3 `examples/two-agents/run.js` — **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- No transport consumes these helpers. An A2A exchange still cannot prove activation end to end, and
+  a server can still ignore an envelope silently; the helpers give a transport the pieces, not the
+  binding. Issue #3 is the dependency.
+- There are no conformance vectors, so another implementation still cannot check itself against
+  this one. `spec/COB-A2A.md` remains a draft.
+- The `A2A-Extensions` versus `X-A2A-Extensions` discrepancy between A2A's documentation and the
+  x402 extension is still unresolved, and is not this pass's to decide.
+- #24 (Agent Card discovery), #25 (x402), and #20 (compose-or-compete) are untouched.
+- The D-3 LinkedIn draft could not be written. This pass touched A2A, so one belongs in
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`. The write was refused with
+  `[sandbox: file access denied under workspace-write mode]`; the offered `danger-full-access`
+  retry was then refused with "no approval channel is available". The draft was composed and
+  deliberately not committed or copied into the repository. Issue #26 is commented with this
+  recurrence.
+- `git pull --rebase` and `git push` still fail in this sandbox (`schannel:
+  SEC_E_NO_CREDENTIALS`), so the commit is local and the runner must push it. `git status` was
+  clean at the start and `HEAD` was `b9ec35e`.
+
+**Next:** attach these helpers to the first transport binding (#3) and exercise one silent-ignore
+response end to end; or write a conformance vector for the surfaces that now exist. A reproducible
+bug still wins.
+
 ## 2026-11-03 — `cob.a2a` adapter: the declaration and metadata, tested
 
 **Attempted:** issue #29, the next A2A step named by the last entry and `docs/a2a.md` §7. No dated

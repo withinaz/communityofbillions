@@ -11,11 +11,17 @@
  *    the URI, verifies the envelope with COB/1 §4.3, and checks its `to` against the
  *    receiver's declared `params.agent`.
  *
+ * 3. **Activation.** A2A extensions are inactive by default, so a server may process an
+ *    envelope only when its own Agent Card declares this extension and the request names
+ *    it in `A2A-Extensions` (draft §6). {@link isCobExtensionActive} decides that, and
+ *    {@link assertCobExtensionEchoed} is the client's only evidence that a server
+ *    processed the envelope at all.
+ *
  * What this module deliberately does not do: it does not read, write, or trust
  * `cob.payment.status`. That key is an unsigned annotation (draft §7); settlement is the
  * envelope and the local {@link Payment} state machine, and nothing here can settle. It
- * also does not implement A2A activation — the `A2A-Extensions` request header belongs to
- * an HTTP binding, not to a package that has no transport.
+ * also does not open an HTTP connection: the header helpers take header values, and
+ * attaching them to a request belongs to a transport binding (issue #3).
  */
 
 import { validateStructure, verifyEnvelope } from './envelope.js';
@@ -34,6 +40,9 @@ export const A2A_ENVELOPE_KEY = 'cob.envelope';
 
 /** The unsigned annotation key. Present so a reader can name it; never read as evidence. */
 export const A2A_PAYMENT_STATUS_KEY = 'cob.payment.status';
+
+/** The A2A request and response header that activates extensions. */
+export const A2A_EXTENSIONS_HEADER = 'A2A-Extensions';
 
 /**
  * @param {unknown} value
@@ -197,4 +206,90 @@ export function readCobEnvelope(message, options) {
   }
 
   return verifyEnvelope(envelope, { ...verifyOptions, expectTo: agent });
+}
+
+/**
+ * Parse an `A2A-Extensions` header value into the extension URIs it names.
+ *
+ * The header is a comma-separated list; empty items and surrounding whitespace are not
+ * meaningful (an absent header names nothing). `Message.extensions` is a different field:
+ * it records provenance per message and activates nothing (draft §5–§6).
+ *
+ * @param {string | null | undefined} value
+ * @returns {string[]}
+ * @throws {ValidationError}
+ */
+export function parseA2AExtensions(value) {
+  if (value === undefined || value === null) return [];
+  if (typeof value !== 'string') {
+    throw new ValidationError(`${A2A_EXTENSIONS_HEADER} header must be a string`, {
+      type: typeof value,
+    });
+  }
+
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+}
+
+/**
+ * Return a request header value that activates `cob.a2a`, preserving any other extensions.
+ *
+ * This is the client half of draft §6.1. It only writes the header: activation is a
+ * request for COB/1 semantics, not a promise that the server agreed to them.
+ *
+ * @param {string | null | undefined} headerValue
+ * @returns {string}
+ * @throws {ValidationError}
+ */
+export function withCobActivation(headerValue) {
+  const extensions = parseA2AExtensions(headerValue);
+  return extensions.includes(A2A_EXTENSION_URI)
+    ? extensions.join(', ')
+    : [...extensions, A2A_EXTENSION_URI].join(', ');
+}
+
+/**
+ * Decide whether a server may process a `cob.envelope` for one request.
+ *
+ * Both halves of draft §6.2 are required, and neither is enough alone: the server's own
+ * Agent Card must declare the extension (`declared: true`), and the request must name the
+ * URI in `A2A-Extensions`. When this returns `false`, the server processes the A2A message
+ * as ordinary traffic and **must not** read `metadata["cob.envelope"]` as a payment
+ * request or receipt. An unknown extension being ignored is correct A2A behaviour, which
+ * is why activation cannot be inferred from the message.
+ *
+ * @param {string | null | undefined} requestHeader value of the `A2A-Extensions` request header
+ * @param {{ declared?: boolean }} [options] `declared` says whether this server's own Agent
+ *   Card lists the extension; anything other than `true` means no.
+ * @returns {boolean}
+ * @throws {ValidationError}
+ */
+export function isCobExtensionActive(requestHeader, options = {}) {
+  if (!isPlainObject(options)) {
+    throw new ValidationError('options must be an object with an optional declared boolean');
+  }
+  if (options.declared !== true) return false;
+  return parseA2AExtensions(requestHeader).includes(A2A_EXTENSION_URI);
+}
+
+/**
+ * Assert that a response echoed the extension URI, which is the only evidence a server
+ * processed the envelope.
+ *
+ * A2A servers ignore extensions they were not asked about, and may ignore this one even
+ * when asked (draft §6.3–§6.4). Silence is not a rejection, so a client **must not** treat
+ * a `cob.payment.request` as delivered — or any envelope as processed — without this echo.
+ *
+ * @param {string | null | undefined} responseHeader value of the `A2A-Extensions` response header
+ * @returns {void}
+ * @throws {ValidationError}
+ */
+export function assertCobExtensionEchoed(responseHeader) {
+  if (parseA2AExtensions(responseHeader).includes(A2A_EXTENSION_URI)) return;
+  throw new ValidationError(
+    `response did not echo ${A2A_EXTENSION_URI} in ${A2A_EXTENSIONS_HEADER}; refusing to treat the request as delivered`,
+    { extension: A2A_EXTENSION_URI },
+  );
 }

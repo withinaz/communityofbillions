@@ -3,15 +3,21 @@ import { describe, it } from 'node:test';
 
 import {
   A2A_ENVELOPE_KEY,
+  A2A_EXTENSIONS_HEADER,
   A2A_EXTENSION_URI,
   AgentIdentity,
   SignatureError,
   ValidationError,
+  assertCobExtensionEchoed,
   attachCobEnvelope,
   createCobExtension,
   createEnvelope,
+  createPaymentRequest,
+  isCobExtensionActive,
+  parseA2AExtensions,
   readCobEnvelope,
   validateCobExtension,
+  withCobActivation,
 } from '../src/index.js';
 import { ExpiredError } from '../src/errors.js';
 
@@ -200,5 +206,138 @@ describe('readCobEnvelope', () => {
   it('requires the receiver to name a COB agent id', () => {
     const envelope = envelopeTo(alice, bob.id);
     assert.throws(() => readCobEnvelope(messageWith(envelope), { agent: bob.publicKey }), ValidationError);
+  });
+});
+
+describe('parseA2AExtensions', () => {
+  it('splits on commas, trims whitespace, and drops empty entries', () => {
+    assert.deepEqual(
+      parseA2AExtensions(' https://example.test/a/v1 , , https://example.test/b/v1 '),
+      ['https://example.test/a/v1', 'https://example.test/b/v1'],
+    );
+  });
+
+  it('treats an absent or empty header as naming no extensions', () => {
+    assert.deepEqual(parseA2AExtensions(undefined), []);
+    assert.deepEqual(parseA2AExtensions(null), []);
+    assert.deepEqual(parseA2AExtensions(''), []);
+  });
+
+  it('refuses a header value that is not a string', () => {
+    assert.throws(
+      () => parseA2AExtensions(42),
+      (error) => error instanceof ValidationError && /header must be a string/.test(error.message),
+    );
+  });
+});
+
+describe('withCobActivation', () => {
+  it('starts an absent header from the extension URI', () => {
+    assert.equal(withCobActivation(undefined), A2A_EXTENSION_URI);
+  });
+
+  it('preserves the other extensions the client wants', () => {
+    assert.equal(
+      withCobActivation('https://example.test/a/v1'),
+      `https://example.test/a/v1, ${A2A_EXTENSION_URI}`,
+    );
+  });
+
+  it('does not add the URI twice', () => {
+    const once = withCobActivation('https://example.test/a/v1');
+    assert.equal(withCobActivation(once), once);
+  });
+});
+
+describe('isCobExtensionActive', () => {
+  it('is active only when the server declares the extension and the request names it', () => {
+    const header = `https://example.test/a/v1, ${A2A_EXTENSION_URI}`;
+    assert.equal(isCobExtensionActive(header, { declared: true }), true);
+    assert.equal(isCobExtensionActive(header), false);
+    assert.equal(isCobExtensionActive(header, { declared: false }), false);
+  });
+
+  it('is inactive when the request names only another extension', () => {
+    assert.equal(isCobExtensionActive('https://example.test/a/v1', { declared: true }), false);
+    assert.equal(isCobExtensionActive(undefined, { declared: true }), false);
+  });
+
+  it('is inactive when the URI is only in Message.extensions, which activates nothing', () => {
+    const envelope = envelopeTo(alice, bob.id);
+    const message = messageWith(envelope);
+    assert.deepEqual(message.extensions, [A2A_EXTENSION_URI]);
+    assert.equal(isCobExtensionActive(undefined, { declared: true }), false);
+  });
+
+  it('refuses options that are not an object', () => {
+    assert.throws(() => isCobExtensionActive(undefined, null), ValidationError);
+  });
+});
+
+describe('assertCobExtensionEchoed', () => {
+  it('accepts an echo among other extensions', () => {
+    assert.equal(
+      assertCobExtensionEchoed(`${A2A_EXTENSION_URI}, https://example.test/a/v1`),
+      undefined,
+    );
+  });
+
+  it('refuses a response that did not echo the URI', () => {
+    assert.throws(
+      () => assertCobExtensionEchoed(undefined),
+      (error) => error instanceof ValidationError && /did not echo/.test(error.message),
+    );
+    assert.throws(() => assertCobExtensionEchoed('https://example.test/a/v1'), ValidationError);
+  });
+});
+
+describe('A2A activation at the transport boundary', () => {
+  const payTo = '0x1111111111111111111111111111111111111111';
+
+  /** Stand-in for a server that honours draft §6.2 before reading the envelope. */
+  function serverRead(message, requestHeader, { declared = true } = {}) {
+    if (!isCobExtensionActive(requestHeader, { declared })) return null;
+    return readCobEnvelope(message, { agent: bob.id });
+  }
+
+  /** Stand-in for a client that honours draft §6.4 before believing a request landed. */
+  function clientDelivers(responseHeader) {
+    assertCobExtensionEchoed(responseHeader);
+    return true;
+  }
+
+  const paymentRequest = createPaymentRequest({
+    identity: alice,
+    to: bob.id,
+    chain: 'base-sepolia',
+    asset: 'USDC',
+    amount: '1.00',
+    payTo,
+  });
+
+  it('does not treat an envelope as a payment request when it was not activated', () => {
+    const message = messageWith(paymentRequest);
+    assert.equal(serverRead(message, undefined), null);
+    assert.equal(serverRead(message, 'https://example.test/a/v1'), null);
+  });
+
+  it('does not process the envelope when the server did not declare the extension', () => {
+    const message = messageWith(paymentRequest);
+    assert.equal(serverRead(message, A2A_EXTENSION_URI, { declared: false }), null);
+  });
+
+  it('processes the envelope once the request activates the extension', () => {
+    const message = messageWith(paymentRequest);
+    const read = serverRead(message, withCobActivation(undefined));
+    assert.equal(read.id, paymentRequest.id);
+  });
+
+  it('does not treat a payment request as delivered without the response echo', () => {
+    assert.throws(() => clientDelivers(undefined), ValidationError);
+    assert.throws(() => clientDelivers('https://example.test/a/v1'), ValidationError);
+  });
+
+  it('treats the payment request as delivered when the response echoes the URI', () => {
+    assert.equal(clientDelivers(A2A_EXTENSION_URI), true);
   });
 });
