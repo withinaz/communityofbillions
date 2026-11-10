@@ -10,7 +10,7 @@
  * Exit codes: `0` success, `1` a protocol or validation error, `2` a usage error.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -36,6 +36,7 @@ Usage: cob <command> [options]
 Identity
   keygen                          Generate an agent identity and write its secret file
     --out <path>                    (required) where to write the secret
+    --force                         replace an existing file, destroying that identity
   id                              Print the agent id for a secret file
     --key <path>                    (required)
 
@@ -79,6 +80,7 @@ General
 
 const OPTIONS = {
   out: { type: 'string' },
+  force: { type: 'boolean' },
   key: { type: 'string' },
   to: { type: 'string' },
   type: { type: 'string' },
@@ -170,13 +172,27 @@ function main() {
  */
 function cmdKeygen(values) {
   const out = requireOption(values.out, '--out');
+  const target = resolve(out);
+
+  // A key file is the identity. Overwriting one is unrecoverable, so it takes an explicit
+  // flag rather than happening as a side effect of a typo.
+  if (values.force !== true && existsSync(target)) {
+    fail(
+      `refusing to overwrite ${target}${describeExistingKey(target)}; pass --force to replace it`,
+      2,
+    );
+  }
+
   const identity = AgentIdentity.generate();
   const secret = identity.exportSecret();
 
-  const target = resolve(out);
   mkdirSync(dirname(target), { recursive: true });
   // 0600 is advisory on Windows but authoritative on POSIX. Ask for it either way.
-  writeFileSync(target, `${JSON.stringify(secret, null, 2)}\n`, { mode: 0o600 });
+  // `wx` also refuses a file that appeared between the check above and this write.
+  writeFileSync(target, `${JSON.stringify(secret, null, 2)}\n`, {
+    mode: 0o600,
+    flag: values.force === true ? 'w' : 'wx',
+  });
 
   if (values.json === true) {
     process.stdout.write(`${JSON.stringify(identity.toPublicDescriptor(), null, 2)}\n`);
@@ -305,6 +321,25 @@ function cmdReceiptCheck(values) {
 }
 
 /* ------------------------------------------------------------------ helpers */
+
+/**
+ * Describe what a refused `keygen` would have destroyed.
+ *
+ * Printing the existing agent id lets the operator see which identity a typo nearly replaced.
+ * A file that is not a readable COB key is still refused: it may be a key written by another
+ * tool, and overwriting it silently would be worse than an unhelpful message.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+function describeExistingKey(path) {
+  try {
+    const secret = JSON.parse(readFileSync(path, 'utf8'));
+    return ` (it holds agent ${AgentIdentity.fromSecret(secret).id})`;
+  } catch {
+    return ' (it exists and is not a readable COB key file)';
+  }
+}
 
 /**
  * @param {unknown} value

@@ -119,7 +119,7 @@ The gate is a `throw`, not an instruction to a model. That is the point.
 ## CLI
 
 ```
-cob keygen --out <path>              generate an identity
+cob keygen --out <path> [--force]    generate an identity; --force replaces an existing file
 cob id --key <path>                  print the agent id
 cob sign --key <path> --to <id> --type <t> --body <json>
 cob verify --envelope <path|->       exit 1 if the envelope is not valid
@@ -130,6 +130,10 @@ cob receipt-check --request <path> --receipt <path>
 
 `cob verify` is designed for a shell: it exits `0` when the envelope is valid and `1` when it is
 not, so it composes with `&&` and with CI.
+
+`cob keygen` refuses to replace an existing file. A key file is the identity, and overwriting one is
+unrecoverable, so the command names the agent id it found and asks for `--force` before destroying
+it.
 
 ## Design rules
 

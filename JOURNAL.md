@@ -11,6 +11,51 @@ Rules for this file:
 
 ---
 
+## 2026-11-10 — `cob keygen` refuses to destroy an identity
+
+**Attempted:** issue #14. No dated directive names this pass, so §2's priority order applied. #14
+describes a destructive bug, so I reproduced it before choosing the A2A track: two `keygen --out`
+calls against the same path both exited 0, and the second replaced the first agent id. A reproducible
+bug outranks the A2A preference under D-2 and §2.1, so the pass is the bug.
+
+**Landed:**
+
+- `packages/core/bin/cob.js`: `keygen` now refuses an existing `--out` path unless `--force` is
+  given. The refusal names the file and, when it can be read, the agent id it holds; it exits 2 and
+  leaves the file byte-identical. Without `--force` the write uses the `wx` flag, so a file that
+  appears between the check and the write is still not overwritten. `--force` is in the usage text.
+- `packages/core/test/cli.test.js`: three tests — the refusal preserves the file and prints the id,
+  `--force` replaces it with a usable secret, and an existing non-key file is refused untouched.
+  The tests send stdout and stderr to files instead of pipes because this sandbox refuses the pipes
+  Node's default `spawnSync` stdio needs.
+- `packages/core/README.md` and `CHANGELOG.md` document the new refusal and the flag. No wire format
+  changed, so `spec/COB-1.md` is untouched.
+- Issue #14 is closed in the same pass; the comment names this commit.
+
+**Gate results:** Gate 1 `node --check` passed for both changed `.js` files. Gate 2 as written,
+`node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`; the same
+files ran as `node --test --test-isolation=none "packages/core/test/*.test.js"`, **226 pass / 0
+fail** (223 before this pass). Gate 3 `examples/two-agents/run.js` — **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- No A2A work this pass, so there is no `docs/a2a.md` note and no D-3 draft. The A2A next steps are
+  unchanged: attach the activation/echo helpers to the first transport (#3), or add conformance
+  vectors. #24/#25/#20 are still decision issues.
+- The literal Gate 2 command still cannot run here. The fallback covers the same files, but the
+  failure is the runner's sandbox, not the code, and fixing it is not this pass's increment.
+- `git push` still fails in this sandbox. `git fetch` and `pull` work with
+  `-c http.sslBackend=openssl`, but push needs credentials, and the URL-specific helper that
+  `gh auth setup-git` installed is a `!` shell command; the sandbox cannot start `sh.exe`
+  (`couldn't create signal pipe`). `http.extraHeader`, `wincred`, and a temporary
+  `credential-store` were tried and did not authenticate. The commit is local; the runner must
+  push it, and the issue comment names that local commit.
+- An `--out` path that exists as a directory still fails with the operating system's `EISDIR`
+  rather than the new refusal message. The data-loss case is covered; this one is cosmetic.
+
+**Next:** issue #30's transport attachment (#3), the A2A conformance vectors, or another
+reproducible bug. A bug still wins.
+
 ## 2026-11-05 — `cob.a2a` activation and echo: header helpers, tested
 
 **Attempted:** issue #30, the next A2A step named by the last entry and `docs/a2a.md` §7. No dated

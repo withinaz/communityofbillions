@@ -66,6 +66,11 @@ documented specification revision.
 
 ### Fixed
 
+- **`cob keygen` refuses to overwrite an existing key file.** A second `keygen --out` pointing at
+  an existing file used to replace that agent's identity silently and irrecoverably. It now exits
+  non-zero, leaves the file byte-identical, and names the agent id it would have destroyed; `--force`
+  performs the replacement explicitly. Three CLI tests cover the refusal, the forced path, and an
+  existing file that is not a readable key. (issue #14)
 - **`validatePaymentRequest` and `validatePaymentReceipt` now parse their timestamps.** `validUntil`
   and `settledAt` were required to be non-empty strings and nothing more, so
   `validatePaymentRequest({ ..., validUntil: 'not-a-date' })` was accepted — and those functions are
