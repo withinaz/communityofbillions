@@ -30,7 +30,11 @@ bug outranks the A2A preference under D-2 and §2.1, so the pass is the bug.
   Node's default `spawnSync` stdio needs.
 - `packages/core/README.md` and `CHANGELOG.md` document the new refusal and the flag. No wire format
   changed, so `spec/COB-1.md` is untouched.
-- Issue #14 is closed in the same pass; the comment names this commit.
+- Issue #14 is closed in the same pass; the comment names b68422a.
+- PR #17 (`fix/keygen-no-overwrite`, opened 2026-09-29) proposes the same fix but also removes
+  JSDoc, replaces the CLI's `✔`/`✘` output with plain ASCII, and drops a helpers banner — unrelated
+  changes against an older `main`. It is superseded, but closing a contributor's PR is not this
+  pass's call. Issue #31 records the decision.
 
 **Gate results:** Gate 1 `node --check` passed for both changed `.js` files. Gate 2 as written,
 `node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`; the same
