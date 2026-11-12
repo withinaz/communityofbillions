@@ -348,8 +348,8 @@ In rough dependency order. Each is a pass, not a day's work crammed into one a p
    2026-10-29: [`spec/COB-A2A.md`](../spec/COB-A2A.md). It fixes the URI, the `params.agent` binding,
    `metadata["cob.envelope"]`, the echo rule for activation, and the payment substate. The
    declaration and metadata adapter landed on 2026-11-03 (#29); the activation/echo header helpers
-   landed on 2026-11-05 (#30, partly). Attaching them to a transport, and conformance vectors,
-   remain.
+   landed on 2026-11-05 (#30, partly). Conformance vectors for those rules landed on 2026-11-12;
+   attaching the helpers to a transport remains.
 4. **Agent Card discovery.** Decide whether the planned `.well-known/cob.json` (issue #1) becomes an
    Agent Card, or is dropped in favour of one.
 5. **Settlement.** Decide the relationship to x402 — implement it, interoperate with it, or document
@@ -627,3 +627,34 @@ open questions.
 **Next:** attach these helpers to the first transport binding and test one silent-ignore response end
 to end, or write a conformance vector for the declaration-and-metadata surface. A reproducible bug
 still wins.
+
+### 2026-11-12 — conformance vectors for the declaration and activation rules
+
+**Read:** `spec/COB-A2A.md` §3–§7 and `packages/core/src/a2a.js`. No external specification was read
+this pass, so nothing below is a new claim about A2A.
+
+**Changed:** new [`spec/test-vectors/a2a/v1.json`](../spec/test-vectors/a2a/v1.json) — 33 vectors
+written by hand from the draft's rules, not exported from the implementation. §4 declaration (8),
+§6.1 header parsing and the activation writer (8), §6.2 both activation conditions (6), §6.4 echo (5),
+and the §3/§5/§7 preconditions that refuse before a signature is checked (6). New
+[`spec/test-vectors/README.md`](../spec/test-vectors/README.md) fixes the
+`cob-conformance-vectors/1` format, the refusal labels, the provenance rule, and the gaps.
+`packages/core/test/a2a-vectors.test.js` consumes the file: 38 tests (5 format checks and one per
+vector). The core suite goes from 226 to 264 tests. No production code changed; the spec's status
+line, its §6 implementation note, and its change log record the vectors, with no normative change.
+This is the first slice of issue #5, which stays open.
+
+**The uncomfortable part.** The suite proves the rejection side of the seam and the pure header
+rules; it cannot yet prove an accepted `read-envelope`, because that needs a signed envelope. Writing
+that fixture now would pin one signer's bytes before the COB/1 envelope vectors exist, so the suite
+still cannot show that two implementations agree on signature verification. And nothing is attached
+to a transport, so issue #30's two failures are pinned as helper-level tests, not as an exchange over
+HTTP. A conformance suite for a surface with no transport is a specification check, not an
+interoperability proof.
+
+**Not done:** transport attachment (#3); signed-envelope and accepted-read vectors; the payment
+substate's allowed values; #24 (Agent Card), #25 (x402), and #20 (compose-or-compete) untouched.
+
+**Next:** attach the §6 helpers to the first transport (#3) and exercise one silent-ignore response
+end to end, or add the COB/1 envelope vectors that an accepted-read vector depends on. A reproducible
+bug still wins.

@@ -11,6 +11,62 @@ Rules for this file:
 
 ---
 
+## 2026-11-12 — `cob.a2a` conformance vectors for the declaration and activation rules
+
+**Attempted:** no dated directive names this pass, so `D-2` and §2 applied. Before taking the A2A
+track I checked the open issues: #31, #26, #25, #24 and #20 are decisions or environment limits, #28
+is a design proposal, and #14/#12 are unrelated. The A2A track's named next step was transport
+attachment (#3) or a conformance vector for the declaration-and-metadata surface. #3 is a transport
+plus acknowledgement messages and does not fit one pass; the vector slice does, and it is the first
+part of issue #5. This pass is that slice.
+
+**Landed:**
+
+- `spec/test-vectors/a2a/v1.json` — **33 vectors**, written by hand from `spec/COB-A2A.md`, not
+  exported from the implementation. They cover the §4 declaration (8), §6.1 header parsing and the
+  activation writer (8), §6.2's two activation conditions (6), §6.4's echo (5), and the §3/§5/§7
+  refusals that happen before a signature is checked (6).
+- `spec/test-vectors/README.md` — the `cob-conformance-vectors/1` format, the operation and refusal
+  vocabularies, the provenance rule ("vectors describe the rules, not the implementation"), and an
+  explicit list of what is not covered.
+- `packages/core/test/a2a-vectors.test.js` — the runner. **38 tests** (5 format/completeness checks
+  and one per vector), and it fails on an unknown operation, an unknown refusal label, a duplicate
+  name, or a refusal for the wrong reason. The core suite goes from **226 to 264 tests**.
+- `spec/COB-A2A.md` status line, §6 implementation note, and change log record the vectors. No rule
+  changed, and the wire format did not change. `docs/a2a.md` §7.3 and §9, `CHANGELOG.md`, and the
+  two `ROADMAP.md` parentheticals are updated; #23 stays 🚧 and #5 stays open.
+- No production code changed. This pass checked and made portable behaviour that already existed
+  rather than altering it.
+
+**Gate results:** Gate 1 `node --check packages/core/test/a2a-vectors.test.js` passed. Gate 2 as
+written, `node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`
+(the runner spawns a child per file); the same files via
+`node --test --test-isolation=none "packages/core/test/*.test.js"` — **264 pass / 0 fail**. Gate 3
+`examples/two-agents/run.js` — **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- The vectors cover rejection and the pure header rules. There is **no accepted `read-envelope`
+  vector**: an accepted envelope needs a signature, and a fixture now would pin one signer's bytes
+  before the COB/1 envelope vectors exist. So the suite cannot yet show that two implementations
+  agree on signature verification, and issue #5 remains open for the COB/1 categories.
+- No transport consumes §6. Issue #30's two failures are pinned as helper-level vectors, not as an
+  HTTP exchange; #30 stays open. #3 is still the dependency.
+- The payment substate's allowed values and non-contradiction rule (§7) are not vectors yet; only
+  "the annotation alone is not an envelope" is.
+- #24 (Agent Card discovery), #25 (x402), and #20 (compose-or-compete) are untouched.
+- The `D-3` LinkedIn draft could not be written. This pass touched A2A, so one belongs in
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`; the write was refused with
+  `[sandbox: file access denied under workspace-write mode]`. It was composed and deliberately not
+  committed or copied into the repository. Issue #26 records this recurrence.
+- `git push` still fails in this sandbox. The credential helper is a `!` shell command, and `sh.exe`
+  cannot create its signal pipe (`Win32 error 5`), so Git never receives a username; `git pull` and
+  `git fetch` work with `-c http.sslBackend=openssl`. The commit is local and the runner must push it.
+
+**Next:** attach the §6 helpers to the first transport (#3) and exercise one silent-ignore response
+end to end, or add the COB/1 envelope vectors that an accepted-read vector depends on. A reproducible
+bug still wins.
+
 ## 2026-11-10 — `cob keygen` refuses to destroy an identity
 
 **Attempted:** issue #14. No dated directive names this pass, so §2's priority order applied. #14

@@ -30,7 +30,7 @@ Goal: two agents on two machines, that have never met, can complete one paid tas
 - 🚧 Transport binding: HTTPS POST of a signed envelope
 - 🗓 Replay cache with a bounded TTL window
 - 🗓 Key rotation & revocation list
-- 🗓 Conformance test vectors (JSON) so other languages can validate themselves
+- 🗓 Conformance test vectors (JSON) so other languages can validate themselves — A2A slice landed (`spec/test-vectors/a2a/`); COB/1 core categories open — [#5](https://github.com/withinaz/communityofbillions/issues/5)
 
 ## Phase 2 — Settlement 🗓
 
@@ -75,7 +75,7 @@ record the uncomfortable parts rather than smoothing them over.
 
 - 🚧 Read AP2 and x402 properly, and replace the second-hand notes — [#21](https://github.com/withinaz/communityofbillions/issues/21)
 - ✅ Compare `canonical.js` with A2A's Agent Card canonicalisation requirement — [#22](https://github.com/withinaz/communityofbillions/issues/22)
-- 🚧 Draft `cob.a2a`: the envelope as an A2A extension — [#23](https://github.com/withinaz/communityofbillions/issues/23) · [draft](spec/COB-A2A.md) · [adapter](packages/core/src/a2a.js) (declaration, metadata, and activation/echo header helpers tested; no transport or conformance vectors)
+- 🚧 Draft `cob.a2a`: the envelope as an A2A extension — [#23](https://github.com/withinaz/communityofbillions/issues/23) · [draft](spec/COB-A2A.md) · [adapter](packages/core/src/a2a.js) (declaration, metadata, activation/echo helpers, and conformance vectors for §4–§6 tested; no transport, and no signed-envelope vector)
 - 🗓 Decide whether `.well-known/cob.json` becomes an Agent Card — [#24](https://github.com/withinaz/communityofbillions/issues/24)
 - 🗓 Decide the relationship to x402 for settlement — [#25](https://github.com/withinaz/communityofbillions/issues/25)
 - 🗓 **Operator decision:** compose or compete — [#20](https://github.com/withinaz/communityofbillions/issues/20)

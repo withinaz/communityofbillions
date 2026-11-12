@@ -36,8 +36,14 @@ documented specification revision.
   message. It defines the extension URI, the Agent Card declaration and `params.agent` binding, the
   `metadata["cob.envelope"]` placement, the `A2A-Extensions` activation and echo rule, and a
   non-authoritative `cob.payment.status` substate. It has a reference adapter for the declaration,
-  metadata, and activation header; conformance vectors are still missing, so it is not a stable
-  surface yet.
+  metadata, and activation header, plus a hand-written conformance-vector slice for those rules. No
+  transport exercises it end to end, so it is not a stable surface yet.
+- **`cob.a2a` conformance vectors** (`spec/test-vectors/a2a/v1.json`) — 33 hand-written vectors for
+  `spec/COB-A2A.md`: the §4 declaration, §6.1–§6.4 activation and echo headers, and the §3/§5/§7
+  refusals that happen before signature verification. `spec/test-vectors/README.md` defines the
+  `cob-conformance-vectors/1` format, and `packages/core/test/a2a-vectors.test.js` runs them. This is
+  the first slice of issue #5; the COB/1 envelope, identity, amount, and receipt vectors are still
+  open, and accepted `read-envelope` is not covered because it needs a signed envelope fixture.
 - **`allowUnlimited` policy field**, default `true`. It names the absence of a spending ceiling:
   with `maxAmount` empty, an amount is uncapped on any chain the policy allows. Today's behaviour
   is unchanged; the flag exists so that unbounded spending can require a visible act once the

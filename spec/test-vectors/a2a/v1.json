@@ -1,0 +1,527 @@
+{
+  "format": "cob-conformance-vectors/1",
+  "specification": "spec/COB-A2A.md",
+  "extension": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+  "provenance": "Hand-written from the rules in spec/COB-A2A.md, not exported from packages/core. A vector states what the specification requires; the runner checks one implementation against it.",
+  "vectors": [
+    {
+      "name": "declaration-accepts-the-specification-example",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+          "description": "Carries signed COB/1 envelopes for payment requests and receipts.",
+          "required": false,
+          "params": {
+            "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "accepted",
+        "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+      }
+    },
+    {
+      "name": "declaration-accepts-an-omitted-required",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+          "params": {
+            "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "accepted",
+        "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+      }
+    },
+    {
+      "name": "declaration-ignores-params-keys-it-does-not-know",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+          "required": false,
+          "params": {
+            "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk",
+            "future-key": "a v1 receiver must ignore this"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "accepted",
+        "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+      }
+    },
+    {
+      "name": "declaration-refuses-required-true",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+          "required": true,
+          "params": {
+            "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "required"
+      }
+    },
+    {
+      "name": "declaration-refuses-a-different-uri",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://example.test/a2a/other/v1",
+          "required": false,
+          "params": {
+            "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "uri"
+      }
+    },
+    {
+      "name": "declaration-refuses-missing-params",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+          "required": false
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "params"
+      }
+    },
+    {
+      "name": "declaration-refuses-a-params-agent-that-is-not-a-cob-id",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": {
+          "uri": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+          "required": false,
+          "params": {
+            "agent": "not-an-agent"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "agent"
+      }
+    },
+    {
+      "name": "declaration-refuses-a-non-object",
+      "rule": "§4",
+      "operation": "validate-declaration",
+      "input": {
+        "extension": null
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "extension-not-object"
+      }
+    },
+    {
+      "name": "header-absent-names-nothing",
+      "rule": "§6.1",
+      "operation": "parse-extensions",
+      "input": {
+        "header": null
+      },
+      "expected": {
+        "outcome": "parsed",
+        "names": []
+      }
+    },
+    {
+      "name": "header-empty-names-nothing",
+      "rule": "§6.1",
+      "operation": "parse-extensions",
+      "input": {
+        "header": ""
+      },
+      "expected": {
+        "outcome": "parsed",
+        "names": []
+      }
+    },
+    {
+      "name": "header-splits-on-commas-and-drops-empty-items",
+      "rule": "§6.1",
+      "operation": "parse-extensions",
+      "input": {
+        "header": " https://example.test/a/v1 , , https://example.test/b/v1 "
+      },
+      "expected": {
+        "outcome": "parsed",
+        "names": [
+          "https://example.test/a/v1",
+          "https://example.test/b/v1"
+        ]
+      }
+    },
+    {
+      "name": "header-refuses-a-non-string",
+      "rule": "§6.1",
+      "operation": "parse-extensions",
+      "input": {
+        "header": 42
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "header-not-string"
+      }
+    },
+    {
+      "name": "activation-starts-from-an-absent-header",
+      "rule": "§6.1",
+      "operation": "with-activation",
+      "input": {
+        "header": null
+      },
+      "expected": {
+        "outcome": "header",
+        "names": [
+          "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+        ]
+      }
+    },
+    {
+      "name": "activation-preserves-other-extensions",
+      "rule": "§6.1",
+      "operation": "with-activation",
+      "input": {
+        "header": "https://example.test/a/v1"
+      },
+      "expected": {
+        "outcome": "header",
+        "names": [
+          "https://example.test/a/v1",
+          "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+        ]
+      }
+    },
+    {
+      "name": "activation-does-not-repeat-a-present-uri",
+      "rule": "§6.1",
+      "operation": "with-activation",
+      "input": {
+        "header": "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+      },
+      "expected": {
+        "outcome": "header",
+        "names": [
+          "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+        ]
+      }
+    },
+    {
+      "name": "activation-does-not-repeat-a-uri-among-others",
+      "rule": "§6.1",
+      "operation": "with-activation",
+      "input": {
+        "header": "https://example.test/a/v1, https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+      },
+      "expected": {
+        "outcome": "header",
+        "names": [
+          "https://example.test/a/v1",
+          "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+        ]
+      }
+    },
+    {
+      "name": "active-only-when-declared-and-named",
+      "rule": "§6.2",
+      "operation": "is-active",
+      "input": {
+        "header": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+        "options": {
+          "declared": true
+        }
+      },
+      "expected": {
+        "outcome": "decided",
+        "active": true
+      }
+    },
+    {
+      "name": "inactive-when-not-declared",
+      "rule": "§6.2",
+      "operation": "is-active",
+      "input": {
+        "header": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+        "options": {
+          "declared": false
+        }
+      },
+      "expected": {
+        "outcome": "decided",
+        "active": false
+      }
+    },
+    {
+      "name": "inactive-when-the-declaration-is-absent",
+      "rule": "§6.2",
+      "operation": "is-active",
+      "input": {
+        "header": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+        "options": {}
+      },
+      "expected": {
+        "outcome": "decided",
+        "active": false
+      }
+    },
+    {
+      "name": "inactive-when-the-request-names-only-another-extension",
+      "rule": "§6.2",
+      "operation": "is-active",
+      "input": {
+        "header": "https://example.test/a/v1",
+        "options": {
+          "declared": true
+        }
+      },
+      "expected": {
+        "outcome": "decided",
+        "active": false
+      }
+    },
+    {
+      "name": "inactive-when-the-header-is-absent",
+      "rule": "§6.2",
+      "operation": "is-active",
+      "input": {
+        "header": null,
+        "options": {
+          "declared": true
+        }
+      },
+      "expected": {
+        "outcome": "decided",
+        "active": false
+      }
+    },
+    {
+      "name": "activation-refuses-options-that-are-not-an-object",
+      "rule": "§6.2",
+      "operation": "is-active",
+      "input": {
+        "header": "https://github.com/withinaz/communityofbillions/a2a/cob/v1",
+        "options": null
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "options-not-object"
+      }
+    },
+    {
+      "name": "echo-accepted-when-the-uri-is-present",
+      "rule": "§6.4",
+      "operation": "assert-echo",
+      "input": {
+        "header": "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+      },
+      "expected": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "name": "echo-accepted-among-other-extensions",
+      "rule": "§6.4",
+      "operation": "assert-echo",
+      "input": {
+        "header": "https://example.test/a/v1, https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+      },
+      "expected": {
+        "outcome": "accepted"
+      }
+    },
+    {
+      "name": "echo-refused-when-absent",
+      "rule": "§6.4",
+      "operation": "assert-echo",
+      "input": {
+        "header": null
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "not-echoed"
+      }
+    },
+    {
+      "name": "echo-refused-when-only-another-extension-is-echoed",
+      "rule": "§6.4",
+      "operation": "assert-echo",
+      "input": {
+        "header": "https://example.test/a/v1"
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "not-echoed"
+      }
+    },
+    {
+      "name": "echo-refuses-a-non-string-header",
+      "rule": "§6.4",
+      "operation": "assert-echo",
+      "input": {
+        "header": 7
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "header-not-string"
+      }
+    },
+    {
+      "name": "read-refuses-a-message-without-the-extension-uri",
+      "rule": "§5",
+      "operation": "read-envelope",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.envelope": {}
+          }
+        },
+        "options": {
+          "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "extension-uri-missing"
+      }
+    },
+    {
+      "name": "read-refuses-a-message-without-metadata",
+      "rule": "§5",
+      "operation": "read-envelope",
+      "input": {
+        "message": {
+          "role": "agent",
+          "extensions": [
+            "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+          ]
+        },
+        "options": {
+          "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "metadata-not-object"
+      }
+    },
+    {
+      "name": "read-refuses-an-envelope-that-is-not-an-object",
+      "rule": "§5",
+      "operation": "read-envelope",
+      "input": {
+        "message": {
+          "role": "agent",
+          "extensions": [
+            "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+          ],
+          "metadata": {
+            "cob.envelope": "{}"
+          }
+        },
+        "options": {
+          "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "envelope-not-object"
+      }
+    },
+    {
+      "name": "read-does-not-turn-the-unsigned-annotation-into-an-envelope",
+      "rule": "§7",
+      "operation": "read-envelope",
+      "input": {
+        "message": {
+          "role": "agent",
+          "extensions": [
+            "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+          ],
+          "metadata": {
+            "cob.payment.status": "settled"
+          }
+        },
+        "options": {
+          "agent": "cob:agent:9tQK3v1sVn0m2Yf4pQ7rLbXwZc8dHjKeSgUaNtMi5Pk"
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "envelope-not-object"
+      }
+    },
+    {
+      "name": "read-refuses-a-receiver-that-is-not-a-cob-agent-id",
+      "rule": "§3",
+      "operation": "read-envelope",
+      "input": {
+        "message": {
+          "role": "agent",
+          "extensions": [
+            "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+          ],
+          "metadata": {
+            "cob.envelope": {}
+          }
+        },
+        "options": {
+          "agent": "not-an-agent"
+        }
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "agent"
+      }
+    },
+    {
+      "name": "read-refuses-options-that-are-not-an-object",
+      "rule": "§3",
+      "operation": "read-envelope",
+      "input": {
+        "message": {
+          "role": "agent",
+          "extensions": [
+            "https://github.com/withinaz/communityofbillions/a2a/cob/v1"
+          ],
+          "metadata": {
+            "cob.envelope": {}
+          }
+        },
+        "options": null
+      },
+      "expected": {
+        "outcome": "refused",
+        "reason": "options-not-object"
+      }
+    }
+  ]
+}

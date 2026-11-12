@@ -1,7 +1,7 @@
 # `cob.a2a` — the COB/1 envelope as an A2A extension
 
 **Version:** 0.1 (draft)
-**Status:** 🚧 Draft — reference adapter in `packages/core` (declaration, metadata, and header activation); no conformance vectors, and no transport binding exercises §6 end to end
+**Status:** 🚧 Draft — reference adapter in `packages/core` (declaration, metadata, and header activation); conformance vectors for §4–§6 and §7's annotation rule in [`test-vectors/a2a/v1.json`](test-vectors/a2a/v1.json); no transport binding exercises §6 end to end
 **Extension URI:** `https://github.com/withinaz/communityofbillions/a2a/cob/v1`
 **Licence:** CC-BY-4.0
 
@@ -22,9 +22,11 @@ question recorded as issue [#25](https://github.com/withinaz/communityofbillions
 This is a **draft**. It is written normatively — `MUST` and `SHOULD` mean what
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) says — because an implementer needs something
 exact to follow. The declaration and metadata placement in §4–§5, and the header helpers for
-activation in §6, have a reference adapter with tests in `packages/core`. Nothing is attached to a
-transport yet, and there are no conformance vectors. A change to any rule below is a breaking change
-and **MUST** use a new extension URI; a change to the envelope is
+activation in §6, have a reference adapter with tests in `packages/core`. The declaration, message
+preconditions, activation, echo, and the annotation rule are also pinned by hand-written vectors in
+[`test-vectors/a2a/v1.json`](test-vectors/a2a/v1.json). Nothing is attached to a transport yet, so no
+end-to-end exchange proves §6, and the signature-dependent accept path has no vector yet. A change to
+any rule below is a breaking change and **MUST** use a new extension URI; a change to the envelope is
 COB/1's business, not this document's.
 
 The extension URI is an identifier, not an endpoint. Until the project has a documentation site, the
@@ -171,9 +173,11 @@ this draft.
 **Reference implementation (non-normative).** `packages/core/src/a2a.js` covers rules 1–4 as
 header-value helpers: `withCobActivation` writes the request header, `isCobExtensionActive` decides
 activation from the request header plus the server's own declaration, and
-`assertCobExtensionEchoed` checks the response. They are not wired to a transport (issue
-[#3](https://github.com/withinaz/communityofbillions/issues/3)), so no end-to-end exchange proves
-them yet. Rule 5 is the absence of a fallback code path; a helper cannot enforce it by itself.
+`assertCobExtensionEchoed` checks the response. `spec/test-vectors/a2a/v1.json` pins rules 1–4 as
+conformance vectors, consumed by `packages/core/test/a2a-vectors.test.js`. They are not wired to a
+transport (issue [#3](https://github.com/withinaz/communityofbillions/issues/3)), so no end-to-end
+exchange proves them yet. Rule 5 is the absence of a fallback code path; a helper cannot enforce it
+by itself.
 
 ## 7. Payment substate
 
@@ -262,6 +266,7 @@ being *displayed*.
 | 0.1 | 2026-10-29 | First draft. URI, Agent Card declaration, `metadata["cob.envelope"]`, activation and echo, payment substate, replay and security notes, open questions. |
 | 0.1 | 2026-11-03 | Reference adapter for §4–§5 in `packages/core`. Clarified that an absent `required` is read as `false` (proto3 JSON). No normative change. |
 | 0.1 | 2026-11-05 | Header helpers for §6 activation and echo in `packages/core`; transport attachment pending. No normative change. |
+| 0.1 | 2026-11-12 | Conformance vectors for §4–§6 and §7's annotation rule in `spec/test-vectors/a2a/v1.json`, consumed by `packages/core/test/a2a-vectors.test.js`. No normative change. |
 
 ---
 
