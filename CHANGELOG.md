@@ -21,6 +21,12 @@ documented specification revision.
 
 ### Added
 
+- **`ReplayCache`** (`packages/core/src/replay.js`) — a bounded, process-local cache keyed by
+  `(from, nonce)`, implementing the now-normative `spec/COB-1.md` §7 rules. It retains a pair until
+  `max(expires, observed + 300 s)`, evicts the least-recently-expiring pair first, and reports every
+  premature eviction through `onUnsafeEviction` and `unsafeEvictions` instead of dropping it
+  silently. 15 tests. The cache is process-local; a restart loses it, and the spec says a receiver
+  that loses its state cannot claim replay protection across the loss.
 - **`cob.a2a` reference adapter** (`packages/core/src/a2a.js`) — builds and validates the
   `AgentExtension` declaration from `spec/COB-A2A.md` §4, attaches a COB/1 envelope to an A2A
   `Message` under `metadata["cob.envelope"]`, and reads it back with COB/1 verification, an

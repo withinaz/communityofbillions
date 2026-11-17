@@ -11,6 +11,72 @@ Rules for this file:
 
 ---
 
+## 2026-11-17 — a bounded replay cache, and a spec that defines its window
+
+**Attempted:** no dated directive names this pass, so §2 and `D-2` applied. I checked the open
+issues before choosing. #31, #26, #25, #24, #20 and #6 are decisions or runner changes; #28 proposes
+a different settlement rail and is a design decision; #5 is the conformance-vector programme and its
+next honest slice is larger than one pass; #1/#2/#3 are Phase 1 features, and #3 — the transport —
+is the A2A track's next step but a full HTTP binding, a networked example and its tests are more
+than one increment. #4 is labelled `security`, and `docs/security.md` calls it "the largest known
+gap in 0.1". Its acceptance criteria fit one pass. A reproducible bug would have outranked it, but
+the suite was green at 264 tests before I started, so there was none. This pass is #4.
+
+**Landed:**
+
+- `spec/COB-1.md` §7 is now normative instead of saying the cache is unspecified. It requires the
+  `(from, nonce)` key, recording only after signature verification, retention at least until
+  `expires` and preferably to `max(expires, observed + 300 s)`, rejection while retained, a bounded
+  state, and reporting every eviction that happens before the window closes. The change log has a
+  row. No field or wire format changed.
+- `packages/core/src/replay.js` — `ReplayCache`, exported with `DEFAULT_REPLAY_TTL_MS` and
+  `DEFAULT_REPLAY_MAX_ENTRIES`. `observe(from, nonce, expiresAt)` returns `'fresh' | 'replay'` and
+  retains until `max(expires, now + ttlMs)`. A deadline-ordered heap keeps eviction O(log n); under
+  pressure it evicts the least-recently-expiring pair and, if that pair had not expired, calls
+  `onUnsafeEviction` and increments `unsafeEvictions` rather than dropping it silently. Bad keys,
+  options, `expiresAt` values, or clock returns fail closed with a `ValidationError`.
+- `packages/core/test/replay.test.js` — **15 tests**. They cover replay, key separation, retention
+  to `expires`, retention past expiry by the TTL, no extension on a replay observation, Date and
+  epoch input, malformed keys and options, least-recently-expiring eviction, the no-report case for
+  an entry that had already expired, the bound under 100 arrivals, and one signed envelope that
+  verifies once and is a replay on its second observation. Core suite: **264 → 279 tests**.
+- `docs/security.md` T4 now describes the mitigation and its residual risks. `packages/core/README.md`
+  has a replay-protection example; `CHANGELOG.md` records the class; `ROADMAP.md` moves the
+  replay-cache item to ✅ because the tests now cover it.
+
+**Gate results:** Gate 1 `node --check` passed for the three changed `.js` files. Gate 2 as written,
+`node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM` (the
+runner spawns a child per file); the same files via
+`node --test --test-isolation=none "packages/core/test/*.test.js"` — **279 pass / 0 fail**. Gate 3
+`examples/two-agents/run.js` — **19/19 expectations held**. Gate 4
+`tools/schedule/tests/run-pass.tests.ps1` — **57/57 assertions passed**. I also compared the heap
+against a naive model over 20,000 randomized operations in a throwaway script: every status, size
+and unsafe-eviction count agreed. The script was deleted, not committed.
+
+**Still broken / not done:**
+
+- The cache is process-local. A restart forgets every pair, so an envelope accepted before a restart
+  can be replayed inside its validity window. The spec says this plainly; persisting the cache is a
+  separate design and was not done.
+- Nothing calls `observe` yet. #3 is still the dependency for a receiver that uses the cache over a
+  transport, and A2A #30 is blocked on the same transport.
+- The issue's "eviction cannot happen before expiry" acceptance is covered for normal operation. A
+  bounded cache cannot also promise that under pressure: when `maxEntries` is reached, one pair
+  must go. The implementation makes that case visible instead of silent, and a test pins both
+  behaviours. If the operator wants hard refusal rather than reported eviction, that is a different
+  policy.
+- No A2A work this pass, so `docs/a2a.md` §9 has no entry and no `D-3` draft was written. That is
+  the rule, not an idle pass: the increment was #4.
+- `git push` failed in this sandbox. `git push` alone fails with
+  `SEC_E_NO_CREDENTIALS`; with `-c http.sslBackend=openssl` the credential helper is a `!` shell
+  command, and `sh.exe`/`bash.exe` cannot create their signal pipe (`Win32 error 5`), so Git never
+  receives a username. The commit is local and the runner must push it. The issue comment names
+  that local commit; `gh` itself works, so the issue and board can still be updated.
+
+**Next:** the first transport slice (#3): POST one envelope as `application/cob+json`, verify on
+arrival, call `ReplayCache.observe` after verification, and return `409` for a replay. That also
+gives #30's activation helpers their first real exchange. A reproducible bug still wins.
+
 ## 2026-11-12 — `cob.a2a` conformance vectors for the declaration and activation rules
 
 **Attempted:** no dated directive names this pass, so `D-2` and §2 applied. Before taking the A2A

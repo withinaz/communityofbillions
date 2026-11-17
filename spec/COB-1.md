@@ -188,12 +188,27 @@ wild, because a verifier that acts on an unknown type acts on semantics it was n
 
 ## 7. Replay
 
-`nonce` exists so that a receiver can detect a replayed envelope. This version of the specification
-defines the field but **does not specify the cache**. A conformant receiver:
+`nonce` exists so that a receiver can detect a replayed envelope. A conformant receiver:
 
-- **MUST** treat `(from, nonce)` as the replay key,
-- **SHOULD** retain seen pairs for at least the envelope's remaining validity window,
-- **MUST** reject a repeated pair while it is retained.
+- **MUST** treat `(from, nonce)` as the replay key;
+- **MUST** add a pair to its replay state only after the envelope's signature has verified — recording
+  an unverified pair lets an attacker consume the bounded state without a valid envelope;
+- **MUST** retain a pair until at least the envelope's `expires`, and **SHOULD** retain it until
+  `max(expires, observed_at + 300 seconds)`, so that clock skew and later re-verification do not
+  reopen the window;
+- **MUST** reject a second envelope carrying a pair that is still retained;
+- **MUST** bound the replay state, because an unbounded cache is a denial-of-service vector in its
+  own right; and
+- **MUST** report every eviction that happens before the retention above has elapsed. A silent drop
+  is a silent downgrade to no replay protection. Least-recently-expiring pairs are evicted first.
+
+The concrete bound, retention window, and reporting mechanism are implementation choices. A receiver
+that loses its replay state — on restart, for example — cannot claim replay protection for envelopes
+accepted before the loss.
+
+[`ReplayCache`](../packages/core/src/replay.js) is the reference implementation. It retains a pair
+until `max(expires, observed + ttlMs)`, defaults to a 300-second retention and 10,000 entries, and
+reports a premature eviction through an `onUnsafeEviction` callback and an `unsafeEvictions` counter.
 
 Expiry bounds the damage of not implementing a cache, which is why the window is short.
 
@@ -349,8 +364,9 @@ Verification is cheap; there is no reason to skip it.
 **Field smuggling.** Reading an envelope member outside the signed allow-list (§4.1) lets an
 attacker add a field the signer never saw. Read `body` and nothing else.
 
-**Replay.** Without a nonce cache (§7), an envelope is valid until it expires, however many times
-it arrives. Keep validity windows short.
+**Replay.** A receiver that does not retain `(from, nonce)` beyond verification accepts the same
+envelope until it expires, however many times it arrives. Keep validity windows short and retain
+pairs as §7 requires; a cache that drops a pair early must say so.
 
 **Clock trust.** Skew tolerance is a window an attacker can use. It is a convenience, not a
 requirement; a receiver with a reliable clock **MAY** set it to zero.
@@ -387,3 +403,4 @@ lists them.
 | --- | --- | --- |
 | 0.1 | 2026-09-28 | First draft. Identity, envelope, canonical form, payment request/receipt, matching, lifecycle, policy, error codes. |
 | 0.1 | 2026-09-30 | `allowMainnet: true` is refused rather than honoured (issue #7). `allowUnlimited` added to the policy, default `true`. |
+| 0.1 | 2026-11-17 | §7 defines the bounded replay state, the retention window, and the rule that a premature eviction must be reported (issue #4). `ReplayCache` is the reference implementation. |

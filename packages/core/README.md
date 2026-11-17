@@ -69,6 +69,38 @@ checkEnvelope(envelope);                           // { valid: true } | { valid:
 `verifyEnvelope` throws; `checkEnvelope` returns the failure as data. Use the first in code that
 cannot continue, the second in a receiver that logs and drops.
 
+### Replay protection
+
+Verification proves an envelope is authentic, not that it is new. A receiver that acts on one needs
+to retain `(from, nonce)` and refuse a second arrival:
+
+```js
+import { ReplayCache, verifyEnvelope } from '@communityofbillions/core';
+
+const cache = new ReplayCache({
+  onUnsafeEviction: ({ from, nonce, deadline }) => {
+    // The bound forced this pair out before its window closed. Log it: replay protection
+    // for that pair is gone, and silently ignoring the callback hides a downgrade.
+  },
+});
+
+verifyEnvelope(envelope, { expectTo: agent.id });   // always verify first
+const status = cache.observe(
+  envelope.from,
+  envelope.nonce,
+  new Date(envelope.expires),
+);
+
+if (status === 'replay') {
+  // The signature is valid, but this exact pair has already been accepted.
+}
+```
+
+The cache retains a pair until `max(expires, observed + 300 s)`, keeps at most 10,000 pairs by
+default, and evicts the least-recently-expiring pair first. It is process-local: a restart loses it.
+Both bounds are options (`ttlMs`, `maxEntries`), and `cache.unsafeEvictions` counts the premature
+evictions if the callback is not enough.
+
 ### Payments
 
 ```js

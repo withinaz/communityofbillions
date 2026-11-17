@@ -105,6 +105,12 @@ export {
 } from './a2a.js';
 
 export {
+  DEFAULT_REPLAY_TTL_MS,
+  DEFAULT_REPLAY_MAX_ENTRIES,
+  ReplayCache,
+} from './replay.js';
+
+export {
   PAYMENT_STATES,
   PAYMENT_TRANSITIONS,
   Payment,

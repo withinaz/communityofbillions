@@ -28,7 +28,7 @@ Goal: two agents on two machines, that have never met, can complete one paid tas
 - 🚧 Agent registry: `/.well-known/cob.json` discovery document
 - 🚧 Reference registry server (read-only, in-memory)
 - 🚧 Transport binding: HTTPS POST of a signed envelope
-- 🗓 Replay cache with a bounded TTL window
+- ✅ Replay cache with a bounded TTL window — `ReplayCache`, [`#4`](https://github.com/withinaz/communityofbillions/issues/4)
 - 🗓 Key rotation & revocation list
 - 🗓 Conformance test vectors (JSON) so other languages can validate themselves — A2A slice landed (`spec/test-vectors/a2a/`); COB/1 core categories open — [#5](https://github.com/withinaz/communityofbillions/issues/5)
 

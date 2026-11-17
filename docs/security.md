@@ -61,12 +61,20 @@ conformance test vectors (Phase 1) are for, and it is the highest-value missing 
 
 *A* captures a valid `cob.payment.request` and re-sends it until it gets paid twice.
 
-**Mitigation (partial).** Short validity windows (default 300 s), a per-envelope `nonce`, and
-terminal payment states. **Gap:** the nonce cache is specified as a requirement but not yet
-implemented or normatively defined. Until it is, replay within the validity window is possible for
-any message type other than `cob.payment.receipt` (which the terminal-state guard covers).
+**Mitigation.** Short validity windows (default 300 s), a per-envelope `nonce`, terminal payment
+states, and a bounded `ReplayCache` keyed by `(from, nonce)`. The cache retains a pair until
+`max(expires, observed + 300 s)`, evicts the least-recently-expiring pair under pressure, and
+reports every eviction that happens before that window closes. A caller **MUST** verify the
+signature before calling `observe`; an unverified pair would let an attacker fill the cache.
 
-**This is the largest known gap in 0.1.** It is tracked in §12 of the spec.
+**Residual risk.** The cache is process-local, so a restart loses it and reopens the window for
+envelopes that were accepted before the restart. The library cannot enforce that a receiver wires
+the cache at all; that is an application responsibility. And if an operator sets `maxEntries` below
+the traffic rate, the cache reports the resulting premature evictions rather than hiding them — a
+receiver that ignores the report has silently lost replay protection.
+
+**Within a retained pair's window, replay is refused.** The remaining exposure is the restart and
+wiring caveats above, not an absent cache.
 
 ### T5 — Double settlement
 
