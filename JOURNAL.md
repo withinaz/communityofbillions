@@ -11,6 +11,65 @@ Rules for this file:
 
 ---
 
+## 2026-11-19 — COB/1 conformance vectors for amounts and receipt matching
+
+**Attempted:** no dated directive names this pass, so §2 and `D-2` applied. There was no reproducible
+bug: the core suite was green at 279 tests and the example at 19/19 before anything changed. Of the
+open issues, #31, #26, #25, #24, #20 and #6 are decisions or runner changes; #28 is a design proposal;
+#3 is a transport plus a networked example, which the 2026-11-17 entry already judged larger than one
+pass; #1 and #2 turn on discovery questions the issue says to settle before code. #5 is in the current
+phase and asks for vectors written from the specification rather than exported from the
+implementation. The 2026-11-12 entry named the COB/1 vectors as the prerequisite for an accepted
+`read-envelope` vector, so this pass is the amounts and receipt-matching slice of #5.
+
+This pass did not touch A2A: no `docs/a2a.md` §9 entry and no `D-3` draft. The envelope, identity and
+canonicalisation categories are still open, so the accepted-read vector is still blocked.
+
+**Landed:**
+
+- `spec/test-vectors/cob1/v1.json` — **30 vectors** written by hand from `spec/COB-1.md` §8.1 and §8.4.
+  §8.1: five accepted forms, twelve format or precision refusals (a JSON number, exponent, sign,
+  leading dot or zero, trailing dot, whitespace, empty, null, and both directions of the precision
+  rule), and five equality cases including `"2.50" == "2.5"` and `"10" != "9"`. §8.4: one accepted
+  match and one vector for each of the six failure codes, with underpayment and overpayment as
+  separate `AMOUNT_MISMATCH` vectors.
+- `packages/core/test/cob1-vectors.test.js` — the runner. **36 tests**: six format and coverage checks
+  plus one per vector. It fails on an unknown operation, an unknown refusal label, an unknown §8.4
+  failure code, a duplicate name, or a suite that does not exercise every failure code. Core suite:
+  **279 → 315 tests**.
+- `spec/COB-1.md` §8.4 links the vectors, and the change log has a row. **No rule changed**, so the
+  wire format did not change.
+- `spec/test-vectors/README.md` gains the three new operations, the `format` and `precision` refusal
+  labels, the `match-receipt` problem codes, a per-file scope section, and the second runner command.
+  `CHANGELOG.md` records the vectors. `ROADMAP.md` moves the conformance-vector item from 🗓 to 🚧 —
+  not ✅, because the envelope, identity and canonicalisation categories are still open.
+
+**Gate results:** Gate 1 `node --check packages/core/test/cob1-vectors.test.js` passed. Gate 2 as
+written, `node --test "packages/core/**/*.test.js"`, still fails in this sandbox with `spawn EPERM`
+(the runner spawns a child per file); the same files via
+`node --test --test-isolation=none "packages/core/test/*.test.js"` — **315 pass / 0 fail**. Gate 3
+`examples/two-agents/run.js` — **19/19 expectations held**. Gate 4
+`tools/schedule/tests/run-pass.tests.ps1` — **57/57 assertions passed**.
+
+**Still broken / not done:**
+
+- The vectors check the reference implementation against rules it already followed; they do not show
+  a second implementation agreeing, which is the point of #5 and still cannot be demonstrated here.
+- The envelope, identity and canonicalisation categories remain open. Canonicalisation needs a
+  documented JSON-safe encoding for the values JSON cannot express (`undefined`, `NaN`, `bigint`,
+  cycles) before its refusal vectors can be written.
+- Signature and expiry vectors still need a signed envelope. No private key is committed, and this
+  pass did not create one; the accepted `read-envelope` vector remains blocked on the same decision.
+- §8.4 says a receiver **SHOULD** report all failing checks. Every vector has exactly one failure, so
+  the suite does not turn that SHOULD into a conformance requirement. `AMOUNT_MISSING` and
+  `AMOUNT_UNCOMPARABLE` are implementation codes that §8.4 does not name, so they are not vectors.
+- #3 (transport), #30 (activation over a transport), #24, #25 and #20 are untouched.
+- `git push` failed with `SEC_E_NO_CREDENTIALS`, the same sandbox limitation recorded on 2026-11-17.
+  The commit is local and the runner must push it.
+
+**Next:** the canonicalisation vectors with a documented tagged-value encoding, or the envelope's
+structural refusals. A reproducible bug still wins.
+
 ## 2026-11-17 — a bounded replay cache, and a spec that defines its window
 
 **Attempted:** no dated directive names this pass, so §2 and `D-2` applied. I checked the open

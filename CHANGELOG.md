@@ -50,6 +50,12 @@ documented specification revision.
   `cob-conformance-vectors/1` format, and `packages/core/test/a2a-vectors.test.js` runs them. This is
   the first slice of issue #5; the COB/1 envelope, identity, amount, and receipt vectors are still
   open, and accepted `read-envelope` is not covered because it needs a signed envelope fixture.
+- **COB/1 amount and receipt-matching conformance vectors**
+  (`spec/test-vectors/cob1/v1.json`) — 30 hand-written vectors for `spec/COB-1.md` §8.1 and §8.4:
+  accepted decimal forms, the format and precision refusals, equality by base-unit value, and one
+  vector for each of the six receipt-matching failure codes. `packages/core/test/cob1-vectors.test.js`
+  runs them and fails if a §8.4 code is missing from the suite. The envelope, identity and
+  canonicalisation categories remain open in issue #5.
 - **`allowUnlimited` policy field**, default `true`. It names the absence of a spending ceiling:
   with `maxAmount` empty, an amount is uncapped on any chain the policy allows. Today's behaviour
   is unchanged; the flag exists so that unbounded spending can require a visible act once the

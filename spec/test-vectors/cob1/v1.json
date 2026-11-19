@@ -1,0 +1,362 @@
+{
+  "format": "cob-conformance-vectors/1",
+  "specification": "spec/COB-1.md",
+  "sections": "§8.1, §8.4",
+  "provenance": "Hand-written from the rules in spec/COB-1.md §8.1 and §8.4, not exported from packages/core. A vector states what the specification requires; the runner checks one implementation against it.",
+  "vectors": [
+    {
+      "name": "amount-accepts-an-integer",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "2", "decimals": 6 },
+      "expected": { "outcome": "accepted" }
+    },
+    {
+      "name": "amount-accepts-a-zero",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "0", "decimals": 6 },
+      "expected": { "outcome": "accepted" }
+    },
+    {
+      "name": "amount-accepts-trailing-zeros-in-the-fraction",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "2.50", "decimals": 6 },
+      "expected": { "outcome": "accepted" }
+    },
+    {
+      "name": "amount-accepts-exactly-the-asset-precision",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "0.000001", "decimals": 6 },
+      "expected": { "outcome": "accepted" }
+    },
+    {
+      "name": "amount-accepts-eighteen-decimals",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "1.000000000000000001", "decimals": 18 },
+      "expected": { "outcome": "accepted" }
+    },
+    {
+      "name": "amount-rejects-a-json-number",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": 2.5, "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-exponent-notation",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "1e5", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-a-negative-amount",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "-1", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-an-explicit-plus",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "+1", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-a-leading-dot",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": ".5", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-a-trailing-dot",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "5.", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-a-leading-zero",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "01", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-the-empty-string",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-surrounding-whitespace",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": " 1", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-null",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": null, "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "format" }
+    },
+    {
+      "name": "amount-rejects-more-precision-than-the-asset-supports",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "2.5000001", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "precision" }
+    },
+    {
+      "name": "amount-rejects-a-fraction-below-the-assets-precision",
+      "rule": "§8.1",
+      "operation": "validate-amount",
+      "input": { "amount": "0.0000001", "decimals": 6 },
+      "expected": { "outcome": "refused", "reason": "precision" }
+    },
+    {
+      "name": "amounts-are-equal-across-trailing-zeros",
+      "rule": "§8.1",
+      "operation": "compare-amounts",
+      "input": { "left": "2.50", "right": "2.5", "decimals": 6 },
+      "expected": { "outcome": "decided", "equal": true }
+    },
+    {
+      "name": "amounts-are-equal-across-a-zero-fraction",
+      "rule": "§8.1",
+      "operation": "compare-amounts",
+      "input": { "left": "0", "right": "0.0", "decimals": 6 },
+      "expected": { "outcome": "decided", "equal": true }
+    },
+    {
+      "name": "amounts-are-equal-with-no-fraction",
+      "rule": "§8.1",
+      "operation": "compare-amounts",
+      "input": { "left": "7", "right": "7", "decimals": 6 },
+      "expected": { "outcome": "decided", "equal": true }
+    },
+    {
+      "name": "amounts-differ-by-one-base-unit",
+      "rule": "§8.1",
+      "operation": "compare-amounts",
+      "input": { "left": "2.5", "right": "2.500001", "decimals": 6 },
+      "expected": { "outcome": "decided", "equal": false }
+    },
+    {
+      "name": "amounts-are-numeric-not-lexicographic",
+      "rule": "§8.1",
+      "operation": "compare-amounts",
+      "input": { "left": "10", "right": "9", "decimals": 6 },
+      "expected": { "outcome": "decided", "equal": false }
+    },
+    {
+      "name": "receipt-settles-a-request-with-the-same-amount-spelled-differently",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.5",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "settled" }
+    },
+    {
+      "name": "receipt-refuses-a-different-invoice",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_2",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.5",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "INVOICE_MISMATCH" }
+    },
+    {
+      "name": "receipt-refuses-a-different-chain",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "ethereum-sepolia",
+          "asset": "USDC",
+          "amount": "2.5",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "CHAIN_MISMATCH" }
+    },
+    {
+      "name": "receipt-refuses-a-different-asset",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDT",
+          "amount": "2.5",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "ASSET_MISMATCH" }
+    },
+    {
+      "name": "receipt-refuses-an-underpayment",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.49",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "AMOUNT_MISMATCH" }
+    },
+    {
+      "name": "receipt-refuses-an-overpayment",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.51",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "AMOUNT_MISMATCH" }
+    },
+    {
+      "name": "receipt-refuses-a-different-payee",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.5",
+          "txHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x3333333333333333333333333333333333333333",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "PAYEE_MISMATCH" }
+    },
+    {
+      "name": "receipt-refuses-a-malformed-transaction-hash",
+      "rule": "§8.4",
+      "operation": "match-receipt",
+      "input": {
+        "request": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.50",
+          "payTo": "0x1111111111111111111111111111111111111111"
+        },
+        "receipt": {
+          "invoiceId": "inv_vector_1",
+          "chain": "base-sepolia",
+          "asset": "USDC",
+          "amount": "2.5",
+          "txHash": "0x1234",
+          "payer": "0x2222222222222222222222222222222222222222",
+          "payee": "0x1111111111111111111111111111111111111111",
+          "settledAt": "2026-11-19T07:30:00Z"
+        }
+      },
+      "expected": { "outcome": "mismatched", "problem": "TXHASH_INVALID" }
+    }
+  ]
+}

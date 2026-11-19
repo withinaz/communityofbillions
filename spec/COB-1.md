@@ -288,6 +288,11 @@ A receiver **SHOULD** report all failing checks, not only the first.
 An amount **greater** than requested is also a mismatch. Overpayment needs a human decision; it is
 not a silent success.
 
+Machine-readable conformance vectors for §8.1 and §8.4 are in
+[`spec/test-vectors/cob1/v1.json`](test-vectors/cob1/v1.json). They are written from this document,
+not exported from the reference implementation, and cover amount acceptance, the format and
+precision refusals, value equality, and one vector for each failure code above.
+
 ### 8.5 Payment lifecycle
 
 ```
@@ -404,3 +409,4 @@ lists them.
 | 0.1 | 2026-09-28 | First draft. Identity, envelope, canonical form, payment request/receipt, matching, lifecycle, policy, error codes. |
 | 0.1 | 2026-09-30 | `allowMainnet: true` is refused rather than honoured (issue #7). `allowUnlimited` added to the policy, default `true`. |
 | 0.1 | 2026-11-17 | §7 defines the bounded replay state, the retention window, and the rule that a premature eviction must be reported (issue #4). `ReplayCache` is the reference implementation. |
+| 0.1 | 2026-11-19 | §8 links conformance vectors for amounts and receipt matching (issue #5). No rule changed. |
