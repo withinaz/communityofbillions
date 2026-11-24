@@ -5,17 +5,21 @@ import {
   A2A_ENVELOPE_KEY,
   A2A_EXTENSIONS_HEADER,
   A2A_EXTENSION_URI,
+  A2A_PAYMENT_STATUS_KEY,
   AgentIdentity,
   SignatureError,
   ValidationError,
   assertCobExtensionEchoed,
   attachCobEnvelope,
+  checkCobPaymentStatus,
   createCobExtension,
   createEnvelope,
+  createPaymentReceipt,
   createPaymentRequest,
   isCobExtensionActive,
   parseA2AExtensions,
   readCobEnvelope,
+  readCobPaymentStatus,
   validateCobExtension,
   withCobActivation,
 } from '../src/index.js';
@@ -206,6 +210,124 @@ describe('readCobEnvelope', () => {
   it('requires the receiver to name a COB agent id', () => {
     const envelope = envelopeTo(alice, bob.id);
     assert.throws(() => readCobEnvelope(messageWith(envelope), { agent: bob.publicKey }), ValidationError);
+  });
+});
+
+describe('readCobPaymentStatus', () => {
+  it('returns a known COB/1 payment state', () => {
+    for (const status of ['requested', 'authorized', 'submitted', 'settled', 'failed', 'expired']) {
+      const message = { role: 'agent', metadata: { [A2A_PAYMENT_STATUS_KEY]: status } };
+      assert.equal(readCobPaymentStatus(message), status);
+    }
+  });
+
+  it('ignores an absent annotation', () => {
+    assert.equal(readCobPaymentStatus({ role: 'agent' }), null);
+    assert.equal(readCobPaymentStatus({ role: 'agent', metadata: {} }), null);
+  });
+
+  it('ignores an unknown value rather than guessing at it', () => {
+    for (const value of ['draft', 'paid', 'settled ', 42, null, ['settled']]) {
+      const message = { role: 'agent', metadata: { [A2A_PAYMENT_STATUS_KEY]: value } };
+      assert.equal(readCobPaymentStatus(message), null);
+    }
+  });
+
+  it('ignores metadata that is not an object', () => {
+    assert.equal(readCobPaymentStatus({ role: 'agent', metadata: 'settled' }), null);
+  });
+
+  it('refuses a message that is not an object', () => {
+    assert.throws(() => readCobPaymentStatus(null), ValidationError);
+  });
+});
+
+describe('checkCobPaymentStatus', () => {
+  const payTo = '0x1111111111111111111111111111111111111111';
+  const request = createPaymentRequest({
+    identity: alice,
+    to: bob.id,
+    chain: 'base-sepolia',
+    asset: 'USDC',
+    amount: '1.00',
+    payTo,
+  });
+  const receipt = createPaymentReceipt({
+    identity: bob,
+    to: alice.id,
+    invoiceId: String(request.body.invoiceId),
+    chain: 'base-sepolia',
+    txHash: `0x${'11'.repeat(32)}`,
+    payer: alice.id,
+    payee: bob.id,
+  });
+
+  /**
+   * @param {Record<string, unknown>} envelope
+   * @param {unknown} [status]
+   * @returns {Record<string, unknown>}
+   */
+  function annotated(envelope, status) {
+    const message = messageWith(envelope);
+    if (status !== undefined) message.metadata[A2A_PAYMENT_STATUS_KEY] = status;
+    return message;
+  }
+
+  it('accepts a receipt annotated as submitted or settled', () => {
+    for (const status of ['submitted', 'settled']) {
+      assert.deepEqual(checkCobPaymentStatus(annotated(receipt, status), receipt), {
+        status,
+        problem: null,
+      });
+    }
+  });
+
+  it('reports a receipt annotated with a pre-submission state', () => {
+    for (const status of ['requested', 'authorized']) {
+      const { problem } = checkCobPaymentStatus(annotated(receipt, status), receipt);
+      assert.equal(problem.code, 'SUBSTATE_CONTRADICTS_ENVELOPE');
+      assert.equal(problem.actual, status);
+      assert.match(problem.message, /receipt cannot be annotated/);
+    }
+  });
+
+  it('reports a receipt annotated as terminally failed or expired', () => {
+    for (const status of ['failed', 'expired']) {
+      assert.equal(
+        checkCobPaymentStatus(annotated(receipt, status), receipt).problem.code,
+        'SUBSTATE_CONTRADICTS_ENVELOPE',
+      );
+    }
+  });
+
+  it('does not constrain a payment request, whose payment may have moved on', () => {
+    assert.deepEqual(checkCobPaymentStatus(annotated(request, 'settled'), request), {
+      status: 'settled',
+      problem: null,
+    });
+  });
+
+  it('does not constrain an envelope that is not a payment message', () => {
+    const envelope = envelopeTo(alice, bob.id);
+    assert.deepEqual(checkCobPaymentStatus(annotated(envelope, 'settled'), envelope), {
+      status: 'settled',
+      problem: null,
+    });
+  });
+
+  it('returns no problem for an absent or unknown annotation', () => {
+    assert.deepEqual(checkCobPaymentStatus(annotated(receipt), receipt), {
+      status: null,
+      problem: null,
+    });
+    assert.deepEqual(checkCobPaymentStatus(annotated(receipt, 'paid'), receipt), {
+      status: null,
+      problem: null,
+    });
+  });
+
+  it('refuses an envelope that is not an object', () => {
+    assert.throws(() => checkCobPaymentStatus(annotated(receipt, 'settled'), 'receipt'), ValidationError);
   });
 });
 

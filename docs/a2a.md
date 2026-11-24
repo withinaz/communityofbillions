@@ -658,3 +658,32 @@ substate's allowed values; #24 (Agent Card), #25 (x402), and #20 (compose-or-com
 **Next:** attach the §6 helpers to the first transport (#3) and exercise one silent-ignore response
 end to end, or add the COB/1 envelope vectors that an accepted-read vector depends on. A reproducible
 bug still wins.
+
+### 2026-11-24 — the payment substate is read, and a contradiction is reported
+
+**Read:** `spec/COB-A2A.md` §7 and `packages/core/src/a2a.js`. No external specification was read
+this pass, so nothing below is a new claim about A2A.
+
+**Changed:** two functions in `packages/core/src/a2a.js`, exported from the package entry point.
+`readCobPaymentStatus(message)` returns one of the six COB/1 wire states or `null` for an absent,
+non-string, or unrecognised value; `draft` is ignored because it is local-only. It throws only for a
+message that is not an object, never for a bad annotation. `checkCobPaymentStatus(message, envelope)`
+returns the status and, when the envelope is a `cob.payment.receipt`, a
+`SUBSTATE_CONTRADICTS_ENVELOPE` problem unless the annotation is `submitted` or `settled`. The
+envelope is not re-verified or rejected: the caller reports the bad annotation and keeps the verified
+envelope, as §7's **SHOULD** asks. A payment request imposes no constraint, because a message may
+re-carry an old request after the payment moved on. 12 tests. `spec/COB-A2A.md` §7 gains a
+non-normative implementation note and a change-log row. No rule changed and the wire format did not
+change.
+
+**The uncomfortable part that did not move:** the annotation is unsigned and remains display-only.
+The checker makes the rule testable; it does not make the message trustworthy. Anything between the
+two agents can rewrite `cob.payment.status`, and a client that ignores the report is no worse off
+than before. Settlement is still the envelope plus the local `Payment` state machine.
+
+**Not done:** conformance vectors for the two new helpers; transport attachment (#3), so #30 is
+still blocked; the accepted `read-envelope` vector; #24 (Agent Card), #25 (x402), and #20
+(compose-or-compete) untouched.
+
+**Next:** attach the §6 helpers and this substate check to the first transport (#3), or add vectors
+for §7's annotation rules. A reproducible bug still wins.

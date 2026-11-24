@@ -98,6 +98,8 @@ export {
   validateCobExtension,
   attachCobEnvelope,
   readCobEnvelope,
+  readCobPaymentStatus,
+  checkCobPaymentStatus,
   parseA2AExtensions,
   withCobActivation,
   isCobExtensionActive,

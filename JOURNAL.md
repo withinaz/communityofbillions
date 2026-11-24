@@ -11,6 +11,65 @@ Rules for this file:
 
 ---
 
+## 2026-11-24 — the A2A payment substate is read, and a contradiction is reported
+
+**Attempted:** No dated directive names this pass, so `D-2` and §2 applied. A reproducible bug would
+have outranked everything, but the core suite was green at 315 tests and the example at 19/19 before
+anything changed. Of the open issues: #31, #26, #25, #24, #20 and #6 are decisions, environment
+limits, or runner changes; #28 is a settlement-rail proposal; #3 is the transport and remains larger
+than one pass; #1/#2 turn on discovery questions their issues say to settle first; #5 is conformance
+vectors, and the A2A vector suite was green. What was left was a concrete hole in the A2A draft:
+`spec/COB-A2A.md` §7 says an unknown `cob.payment.status` **MUST** be ignored and a contradiction
+**SHOULD** be reported while the envelope is trusted, and the adapter implemented neither. Its own
+header said it deliberately did not read the key. This pass implemented those two rules.
+
+**Landed:**
+
+- `packages/core/src/a2a.js`: `readCobPaymentStatus(message)` returns one of the six COB/1 wire
+  states, or `null` for an absent key, a non-string, an unrecognised value, or non-object metadata.
+  `draft` is ignored because it never reaches a message. It throws only for a message that is not an
+  object, never for a bad annotation. `checkCobPaymentStatus(message, envelope)` returns
+  `{ status, problem }` and reports `SUBSTATE_CONTRADICTS_ENVELOPE` when a `cob.payment.receipt` is
+  annotated outside `submitted`/`settled`. It does not re-verify or reject the envelope: the caller
+  keeps the verified envelope and reports the annotation, as §7's **SHOULD** asks. A payment request
+  is not constrained; a message may re-carry an old request after the payment moved on.
+- `packages/core/test/a2a.test.js`: **12 tests**. They cover all six states, absent/unknown/non-string
+  values including `draft`, non-object metadata, both accepted receipt annotations, four
+  contradictions, a request annotated `settled` (allowed), a non-payment envelope, and a non-object
+  envelope. Core suite: **315 → 327 tests**.
+- `packages/core/src/index.js` exports both helpers. `spec/COB-A2A.md` §7 gains a non-normative
+  implementation note and a change-log row; **no rule changed**, so the wire format did not change.
+  `CHANGELOG.md`, the dated entry in `docs/a2a.md` §9, and the #23 parenthetical in `ROADMAP.md`
+  record it. #23 stays 🚧.
+
+**Gate results:** Gate 1 `node --check` passed for the three changed `.js` files. Gate 2 as written,
+`node --test "packages/core/**/*.test.js"`, still fails with `spawn EPERM` for every file (the runner
+spawns a child per file); the same files via
+`node --test --test-isolation=none "packages/core/test/*.test.js"` — **327 pass / 0 fail**. Gate 3
+`examples/two-agents/run.js` — **19/19 expectations held**.
+
+**Still broken / not done:**
+
+- The annotation is unsigned and stays display-only. The new checker makes §7's rules testable; it
+  does not make a message trustworthy. Anything between the two agents can rewrite the key, and a
+  client that ignores the report is no worse off than before.
+- No conformance vectors for the two helpers. The a2a suite still has no accepted `read-envelope`
+  vector, and §6 is still not attached to a transport (#3), so #30 remains blocked.
+- #24 (Agent Card), #25 (x402), #20 (compose-or-compete), #28 (settlement rail), and #6 (key
+  rotation) are untouched.
+- The `D-3` LinkedIn draft has no file. This pass touched A2A, so one belongs in
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`. The write was refused with
+  `[sandbox: file access denied under workspace-write mode]`; a retry with `danger-full-access`
+  failed because no approval channel is available. The draft was composed and deliberately not
+  committed. Issue #26 records the same limitation.
+- `git push` failed in this sandbox. Plain push reports `SEC_E_NO_CREDENTIALS`; with
+  `-c http.sslBackend=openssl` the credential helper is a `!` shell command and `sh.exe`/`bash.exe`
+  cannot create their signal pipe (`Win32 error 5`), so Git never receives a username. The commit is
+  local and the runner must push it. `gh` itself works, so the issue and board can still be read.
+
+**Next:** attach the §6 helpers and this substate check to the first transport (#3), or add
+conformance vectors for §7's annotation rules. A reproducible bug still wins.
+
 ## 2026-11-19 — COB/1 conformance vectors for amounts and receipt matching
 
 **Attempted:** no dated directive names this pass, so §2 and `D-2` applied. There was no reproducible

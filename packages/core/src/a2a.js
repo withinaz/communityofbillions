@@ -17,11 +17,15 @@
  *    {@link assertCobExtensionEchoed} is the client's only evidence that a server
  *    processed the envelope at all.
  *
- * What this module deliberately does not do: it does not read, write, or trust
- * `cob.payment.status`. That key is an unsigned annotation (draft §7); settlement is the
- * envelope and the local {@link Payment} state machine, and nothing here can settle. It
- * also does not open an HTTP connection: the header helpers take header values, and
- * attaching them to a request belongs to a transport binding (issue #3).
+ * 4. **Payment substate.** `cob.payment.status` is an unsigned annotation (draft §7).
+ *    {@link readCobPaymentStatus} returns a known COB/1 state and ignores anything else;
+ *    {@link checkCobPaymentStatus} reports an annotation that contradicts the envelope while
+ *    leaving the envelope itself untouched. Nothing here treats the annotation as evidence.
+ *
+ * What this module deliberately does not do: it never settles from `cob.payment.status`.
+ * Settlement is the envelope and the local {@link Payment} state machine. It also does not
+ * open an HTTP connection: the header helpers take header values, and attaching them to a
+ * request belongs to a transport binding (issue #3).
  */
 
 import { validateStructure, verifyEnvelope } from './envelope.js';
@@ -40,6 +44,20 @@ export const A2A_ENVELOPE_KEY = 'cob.envelope';
 
 /** The unsigned annotation key. Present so a reader can name it; never read as evidence. */
 export const A2A_PAYMENT_STATUS_KEY = 'cob.payment.status';
+
+/**
+ * The COB/1 states draft §7 allows as an annotation. `draft` is excluded: it is a local
+ * state that has no wire representation (COB/1 §8.5), so annotating a message with it is
+ * indistinguishable from an unknown value.
+ */
+const A2A_PAYMENT_STATES = Object.freeze([
+  'requested',
+  'authorized',
+  'submitted',
+  'settled',
+  'failed',
+  'expired',
+]);
 
 /** The A2A request and response header that activates extensions. */
 export const A2A_EXTENSIONS_HEADER = 'A2A-Extensions';
@@ -206,6 +224,81 @@ export function readCobEnvelope(message, options) {
   }
 
   return verifyEnvelope(envelope, { ...verifyOptions, expectTo: agent });
+}
+
+/**
+ * Read the unsigned `cob.payment.status` annotation from an A2A message.
+ *
+ * Draft §7 makes the value advisory: a receiver **MUST** ignore an unknown value rather than
+ * guess at it. This function therefore returns `null` for an absent key, a non-string, or a
+ * string outside the six COB/1 wire states — including `draft`, which never reaches a
+ * message. It never throws for the *value*; a malformed annotation is ignored, not fatal.
+ *
+ * The result is for routing and display only. It is not signed, proves nothing, and cannot
+ * settle a payment; read the envelope with {@link readCobEnvelope} for anything that matters.
+ *
+ * @param {Record<string, unknown>} message an A2A `Message` object
+ * @returns {string | null} a known COB/1 payment state, or `null`
+ * @throws {ValidationError} when `message` is not a plain object
+ */
+export function readCobPaymentStatus(message) {
+  if (!isPlainObject(message)) {
+    throw new ValidationError('message must be a plain object');
+  }
+
+  const metadata = message.metadata;
+  if (!isPlainObject(metadata)) return null;
+
+  const value = /** @type {Record<string, unknown>} */ (metadata)[A2A_PAYMENT_STATUS_KEY];
+  return typeof value === 'string' && A2A_PAYMENT_STATES.includes(value) ? value : null;
+}
+
+/**
+ * Check the annotation against the envelope it accompanies.
+ *
+ * Draft §7 says the substate **MUST NOT** contradict the envelope, and that a receiver
+ * **SHOULD** trust the envelope and report the annotation as malformed. This returns data
+ * rather than throwing, so a caller can keep processing the verified envelope while
+ * reporting the bad annotation.
+ *
+ * Only a receipt constrains the state. A receipt is a claim of settlement, which implies the
+ * payment reached `submitted`, so annotating one `requested`, `authorized`, `failed`, or
+ * `expired` is a contradiction. A payment request does not constrain it: a message may
+ * re-carry an old request while the payment has since moved on, and draft §7 gives no upper
+ * bound for that.
+ *
+ * The envelope is not re-verified here. Pass an envelope that {@link readCobEnvelope}
+ * returned; this function only reads its `type` and must not be used as a validity check.
+ *
+ * @param {Record<string, unknown>} message an A2A `Message` object
+ * @param {Record<string, unknown>} envelope a verified COB/1 envelope
+ * @returns {{
+ *   status: string | null,
+ *   problem: null | { code: string, message: string, expected: string, actual: string },
+ * }}
+ * @throws {ValidationError} when `message` or `envelope` is not a plain object
+ */
+export function checkCobPaymentStatus(message, envelope) {
+  const status = readCobPaymentStatus(message);
+
+  if (!isPlainObject(envelope)) {
+    throw new ValidationError('envelope must be a COB/1 envelope object');
+  }
+
+  const allowed = status === 'submitted' || status === 'settled';
+  if (status === null || envelope.type !== 'cob.payment.receipt' || allowed) {
+    return { status, problem: null };
+  }
+
+  return {
+    status,
+    problem: {
+      code: 'SUBSTATE_CONTRADICTS_ENVELOPE',
+      message: `a cob.payment.receipt cannot be annotated "${status}": a receipt means the payment reached submitted`,
+      expected: 'submitted or settled',
+      actual: status,
+    },
+  };
 }
 
 /**

@@ -197,6 +197,14 @@ A message **MAY** carry `Message.metadata["cob.payment.status"]` with one of the
   `cob.payment.receipt` cannot be annotated `requested`, and a receiver that sees the contradiction
   **SHOULD** trust the envelope and report the annotation as malformed.
 
+**Reference implementation (non-normative).** `readCobPaymentStatus(message)` returns one of the six
+states above, or `null` for an absent key, a non-string, or any unrecognised value; `draft` is
+ignored because it is local-only. `checkCobPaymentStatus(message, envelope)` returns the status and,
+when the envelope is a `cob.payment.receipt`, a `SUBSTATE_CONTRADICTS_ENVELOPE` problem unless the
+annotation is `submitted` or `settled`. A payment request is not constrained: a message may re-carry
+an old request while the payment has moved on. Neither helper re-verifies the envelope, and neither
+lets the annotation affect settlement.
+
 ## 8. Verification and replay
 
 - The receiver **MUST** verify the envelope per COB/1 §4.3 before reading `body`. A2A transport
@@ -267,6 +275,7 @@ being *displayed*.
 | 0.1 | 2026-11-03 | Reference adapter for §4–§5 in `packages/core`. Clarified that an absent `required` is read as `false` (proto3 JSON). No normative change. |
 | 0.1 | 2026-11-05 | Header helpers for §6 activation and echo in `packages/core`; transport attachment pending. No normative change. |
 | 0.1 | 2026-11-12 | Conformance vectors for §4–§6 and §7's annotation rule in `spec/test-vectors/a2a/v1.json`, consumed by `packages/core/test/a2a-vectors.test.js`. No normative change. |
+| 0.1 | 2026-11-24 | Reference adapter for §7's annotation rules: unknown values are ignored and a receipt annotated outside `submitted`/`settled` is reported without rejecting the envelope. No normative change. |
 
 ---
 

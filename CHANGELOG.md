@@ -32,6 +32,11 @@ documented specification revision.
   `Message` under `metadata["cob.envelope"]`, and reads it back with COB/1 verification, an
   `extensions` URI check, and the receiver's `to` check. 19 tests. `cob.payment.status` is not read
   as evidence.
+- **`cob.a2a` payment-substate helpers** — `readCobPaymentStatus` and `checkCobPaymentStatus` in
+  `packages/core`. They implement `spec/COB-A2A.md` §7 without treating the annotation as evidence:
+  an absent or unknown value is ignored, and a `cob.payment.receipt` annotated outside `submitted`
+  or `settled` is reported as `SUBSTATE_CONTRADICTS_ENVELOPE` while the verified envelope is still
+  returned. 12 tests.
 - **`cob.a2a` activation and echo helpers** — `parseA2AExtensions`, `withCobActivation`,
   `isCobExtensionActive`, and `assertCobExtensionEchoed` in `packages/core`. They implement
   `spec/COB-A2A.md` §6 for the `A2A-Extensions` request and response headers: a server processes an
