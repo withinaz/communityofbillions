@@ -522,6 +522,396 @@
         "outcome": "refused",
         "reason": "options-not-object"
       }
+    },
+    {
+      "name": "status-requested-is-readable",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "requested"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": "requested"
+      }
+    },
+    {
+      "name": "status-authorized-is-readable",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "authorized"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": "authorized"
+      }
+    },
+    {
+      "name": "status-submitted-is-readable",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "submitted"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": "submitted"
+      }
+    },
+    {
+      "name": "status-settled-is-readable",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "settled"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": "settled"
+      }
+    },
+    {
+      "name": "status-failed-is-readable",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "failed"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": "failed"
+      }
+    },
+    {
+      "name": "status-expired-is-readable",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "expired"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": "expired"
+      }
+    },
+    {
+      "name": "status-absent-is-ignored",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {}
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": null
+      }
+    },
+    {
+      "name": "status-unknown-is-ignored",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "processing"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": null
+      }
+    },
+    {
+      "name": "status-draft-is-ignored",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "draft"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": null
+      }
+    },
+    {
+      "name": "status-non-string-is-ignored",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": 42
+          }
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": null
+      }
+    },
+    {
+      "name": "status-missing-metadata-is-ignored",
+      "rule": "§7",
+      "operation": "read-payment-status",
+      "input": {
+        "message": {
+          "role": "agent"
+        }
+      },
+      "expected": {
+        "outcome": "status",
+        "status": null
+      }
+    },
+    {
+      "name": "receipt-annotated-submitted-is-consistent",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "submitted"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "submitted",
+        "contradiction": false
+      }
+    },
+    {
+      "name": "receipt-annotated-settled-is-consistent",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "settled"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "settled",
+        "contradiction": false
+      }
+    },
+    {
+      "name": "receipt-annotated-requested-contradicts",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "requested"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "requested",
+        "contradiction": true
+      }
+    },
+    {
+      "name": "receipt-annotated-authorized-contradicts",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "authorized"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "authorized",
+        "contradiction": true
+      }
+    },
+    {
+      "name": "receipt-annotated-failed-contradicts",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "failed"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "failed",
+        "contradiction": true
+      }
+    },
+    {
+      "name": "receipt-annotated-expired-contradicts",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "expired"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "expired",
+        "contradiction": true
+      }
+    },
+    {
+      "name": "receipt-without-an-annotation-is-consistent",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {}
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": null,
+        "contradiction": false
+      }
+    },
+    {
+      "name": "receipt-with-an-unknown-annotation-is-consistent",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "paid"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.receipt"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": null,
+        "contradiction": false
+      }
+    },
+    {
+      "name": "request-annotated-requested-is-consistent",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "requested"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.request"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "requested",
+        "contradiction": false
+      }
+    },
+    {
+      "name": "request-annotated-settled-is-consistent",
+      "rule": "§7",
+      "operation": "check-payment-status",
+      "input": {
+        "message": {
+          "role": "agent",
+          "metadata": {
+            "cob.payment.status": "settled"
+          }
+        },
+        "envelope": {
+          "type": "cob.payment.request"
+        }
+      },
+      "expected": {
+        "outcome": "checked",
+        "status": "settled",
+        "contradiction": false
+      }
     }
   ]
 }

@@ -1,7 +1,7 @@
 # `cob.a2a` — the COB/1 envelope as an A2A extension
 
 **Version:** 0.1 (draft)
-**Status:** 🚧 Draft — reference adapter in `packages/core` (declaration, metadata, and header activation); conformance vectors for §4–§6 and §7's annotation rule in [`test-vectors/a2a/v1.json`](test-vectors/a2a/v1.json); no transport binding exercises §6 end to end
+**Status:** 🚧 Draft — reference adapter in `packages/core` (declaration, metadata, and header activation); conformance vectors for §4–§7 in [`test-vectors/a2a/v1.json`](test-vectors/a2a/v1.json); no transport binding exercises §6 end to end
 **Extension URI:** `https://github.com/withinaz/communityofbillions/a2a/cob/v1`
 **Licence:** CC-BY-4.0
 
@@ -194,8 +194,11 @@ A message **MAY** carry `Message.metadata["cob.payment.status"]` with one of the
   **MUST NOT** be used to settle a payment. Settlement comes from the envelope and the local
   `Payment` state machine, exactly as it does without A2A.
 - The substate **MUST NOT** contradict the envelope. An envelope that carries a
-  `cob.payment.receipt` cannot be annotated `requested`, and a receiver that sees the contradiction
-  **SHOULD** trust the envelope and report the annotation as malformed.
+  `cob.payment.receipt` **MUST NOT** be annotated `requested`, `authorized`, `failed`, or `expired`:
+  a receipt claims the payment reached `submitted`, and those four states are inconsistent with that
+  claim. `submitted` and `settled` are consistent with a receipt. A payment request imposes no such
+  constraint: a message may re-carry an old request after the payment has moved on. A receiver that
+  sees a contradiction **SHOULD** trust the envelope and report the annotation as malformed.
 
 **Reference implementation (non-normative).** `readCobPaymentStatus(message)` returns one of the six
 states above, or `null` for an absent key, a non-string, or any unrecognised value; `draft` is
@@ -276,6 +279,7 @@ being *displayed*.
 | 0.1 | 2026-11-05 | Header helpers for §6 activation and echo in `packages/core`; transport attachment pending. No normative change. |
 | 0.1 | 2026-11-12 | Conformance vectors for §4–§6 and §7's annotation rule in `spec/test-vectors/a2a/v1.json`, consumed by `packages/core/test/a2a-vectors.test.js`. No normative change. |
 | 0.1 | 2026-11-24 | Reference adapter for §7's annotation rules: unknown values are ignored and a receipt annotated outside `submitted`/`settled` is reported without rejecting the envelope. No normative change. |
+| 0.1 | 2026-11-26 | §7 now names the four annotations that contradict a `cob.payment.receipt` (`requested`, `authorized`, `failed`, `expired`) and the two that do not (`submitted`, `settled`); vectors pin the six allowed values, the ignored values, and the non-contradiction rule. This closes the §7 gap the 2026-11-12 row named before its vectors existed. No wire change. |
 
 ---
 

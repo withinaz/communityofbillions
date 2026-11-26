@@ -11,6 +11,76 @@ Rules for this file:
 
 ---
 
+## 2026-11-26 — §7's annotation rule becomes a conformance vector
+
+**Attempted:** No dated directive names this pass, so `D-2` and §2 applied. The core suite was green
+at 327 tests and the example at 19/19 before anything changed, so there was no reproducible bug to
+outrank the A2A track. Of the open issues: #31, #26, #25, #24, #20 and #6 are decisions, environment
+limits, or runner changes; #28 is a settlement-rail proposal; #3 is the transport and remains larger
+than one pass; #1/#2 turn on discovery questions their issues say to settle first. #5 is conformance
+vectors, and the last pass's "Next" named vectors for §7's annotation rules. There was a concrete
+reason to take it: `spec/COB-A2A.md`'s status line and its 2026-11-12 change-log row said §7's
+annotation rule was pinned by vectors, but `spec/test-vectors/a2a/v1.json` had no §7 operation and
+its README said the allowed values and non-contradiction rule were *not* covered. The spec claimed
+coverage the repository did not have. This pass made the claim true.
+
+**Landed:**
+
+- `spec/test-vectors/a2a/v1.json`: **21 new vectors** for §7. Six cover the allowed wire states
+  (`requested`, `authorized`, `submitted`, `settled`, `failed`, `expired`). Five cover values that
+  must be ignored rather than guessed at: absent, unknown (`processing`), the local-only `draft`, a
+  non-string (`42`), and a message with no `metadata`. Four cover a receipt annotated `requested`,
+  `authorized`, `failed` or `expired` (a contradiction), two cover `submitted`/`settled` (consistent),
+  two cover a receipt with an absent or unknown annotation, and two cover a payment request annotated
+  `requested` or `settled` (unconstrained). Suite: **33 → 54 vectors**.
+- `packages/core/test/a2a-vectors.test.js`: two operations, `read-payment-status` and
+  `check-payment-status`, with outcome checks for `status` and `checked`. The `contradiction` field
+  is compared to the presence of a problem, not to a specific implementation code, so a conforming
+  implementation can use its own diagnostic. **59 tests** in that file (5 format checks + 54
+  vectors); core suite **327 → 348**.
+- `spec/COB-A2A.md` §7 now names the four annotations that contradict a `cob.payment.receipt` and
+  the two that do not, instead of giving `requested` as the only example; the status line says §4–§7;
+  the change log has a 2026-11-26 row that says the earlier §7 claim is now backed.
+- `spec/test-vectors/README.md` gains the two operations, the `contradiction` convention, the
+  minimal-envelope caveat, and the §7 coverage; the stale "not covered" bullet is gone.
+  `CHANGELOG.md`, `ROADMAP.md`'s #23 parenthetical, and the dated entry in `docs/a2a.md` §9 record
+  it. #23 stays 🚧. No production code changed and no wire format changed.
+
+**Gate results:** Gate 1 `node --check packages/core/test/a2a-vectors.test.js` passed. Gate 2
+`node --test --test-isolation=none "packages/core/test/*.test.js"` — **348 pass / 0 fail**. Gate 3
+`examples/two-agents/run.js` — **19/19 expectations held**. The sandbox now refuses to start `node`
+as a direct child of the shell (`\\.\pipe\LOCAL\dotnet_…` access denied); the same commands through
+`cmd /c` work, which is how the gates were run. That is an environment change from the 2026-11-24
+pass, not a repository change. A scratch `.diff.txt` written while reviewing the diff was caught in
+the commit; I removed it and amended the commit before any push, so it was never repository content.
+The mistake was mine, not the runner's.
+
+**Still broken / not done:**
+
+- The vectors pin the rule; they do not make the annotation trustworthy. `cob.payment.status` is
+  still unsigned and display-only, and settlement is still the envelope plus the `Payment` state
+  machine. Anything on the path can rewrite the annotation.
+- The `envelope` in the `check-payment-status` vectors is only `{ "type": … }`. The rule depends on
+  the message type, and the vectors deliberately do not verify the envelope; the README says a
+  receiver must still pass an envelope it has already verified. The accepted `read-envelope` vector
+  is still missing because it needs a signed envelope fixture.
+- No transport (#3), so §6 is still not exercised end to end and #30 remains blocked. #24 (Agent
+  Card), #25 (x402), #20 (compose-or-compete), #28 (settlement rail) and #6 (key rotation) are
+  untouched.
+- The `D-3` draft could not be written to
+  `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`: the path is outside the
+  workspace, the write was refused, and escalation has no approval channel. The draft was composed
+  but its text is not in the repository, the same limitation as the 2026-11-24 pass.
+- `git ls-remote` and `git pull` fail with `SEC_E_NO_CREDENTIALS`; the commit is local and the runner
+  must push it. `gh` also cannot start under the sandbox's named-pipe denial, so the issue and board
+  updates for this pass were not made.
+
+**Next:** the accepted `read-envelope` vector, which needs a signed envelope fixture; or the first
+transport slice (#3), which would also give the §7 check a real message to annotate. A reproducible
+bug still wins.
+
+---
+
 ## 2026-11-24 — the A2A payment substate is read, and a contradiction is reported
 
 **Attempted:** No dated directive names this pass, so `D-2` and §2 applied. A reproducible bug would

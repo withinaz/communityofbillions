@@ -49,11 +49,12 @@ documented specification revision.
   non-authoritative `cob.payment.status` substate. It has a reference adapter for the declaration,
   metadata, and activation header, plus a hand-written conformance-vector slice for those rules. No
   transport exercises it end to end, so it is not a stable surface yet.
-- **`cob.a2a` conformance vectors** (`spec/test-vectors/a2a/v1.json`) — 33 hand-written vectors for
-  `spec/COB-A2A.md`: the §4 declaration, §6.1–§6.4 activation and echo headers, and the §3/§5/§7
-  refusals that happen before signature verification. `spec/test-vectors/README.md` defines the
+- **`cob.a2a` conformance vectors** (`spec/test-vectors/a2a/v1.json`) — 54 hand-written vectors for
+  `spec/COB-A2A.md`: the §4 declaration, §6.1–§6.4 activation and echo headers, the §3/§5 refusals
+  that happen before signature verification, and §7's six allowed values, its ignored values, and its
+  non-contradiction rule for receipts and requests. `spec/test-vectors/README.md` defines the
   `cob-conformance-vectors/1` format, and `packages/core/test/a2a-vectors.test.js` runs them. This is
-  the first slice of issue #5; the COB/1 envelope, identity, amount, and receipt vectors are still
+  the first slice of issue #5; the COB/1 envelope, identity and canonicalisation vectors are still
   open, and accepted `read-envelope` is not covered because it needs a signed envelope fixture.
 - **COB/1 amount and receipt-matching conformance vectors**
   (`spec/test-vectors/cob1/v1.json`) — 30 hand-written vectors for `spec/COB-1.md` §8.1 and §8.4:

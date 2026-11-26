@@ -52,6 +52,8 @@ A file is one JSON object:
 | `is-active` | `{ header, options }` | `{"outcome":"decided","active":true|false}` |
 | `assert-echo` | `{ header }` | `{"outcome":"accepted"}` |
 | `read-envelope` | `{ message, options }` | not yet exercised, see scope |
+| `read-payment-status` | `{ message }` | `{"outcome":"status","status":"settled"}`, or `null` for an ignored annotation |
+| `check-payment-status` | `{ message, envelope }` | `{"outcome":"checked","status":"settled","contradiction":false}` |
 | `validate-amount` | `{ amount, decimals }` | `{"outcome":"accepted"}` or a refusal |
 | `compare-amounts` | `{ left, right, decimals }` | `{"outcome":"decided","equal":true|false}` |
 | `match-receipt` | `{ request, receipt }` | `{"outcome":"settled"}`, or `{"outcome":"mismatched","problem":"CODE"}` |
@@ -60,6 +62,12 @@ A file is one JSON object:
 spacing or order; the vector checks *which* extension names it carries and whether one is repeated,
 not the exact string. In `with-activation`, the result MUST contain every name the input carried and
 MUST contain the `cob.a2a` URI exactly once.
+
+For `check-payment-status`, `contradiction` says whether §7's non-contradiction rule was broken; the
+problem's own code and message are implementation-defined, because §7 requires a report but does not
+name a diagnostic. The `envelope` in these vectors carries only `type`: the rule depends on the
+message type, not on envelope validity, and a receiver must still pass an envelope it has already
+verified. The accepted-read gap below is where that verification belongs.
 
 A refusal is written as:
 
@@ -110,7 +118,10 @@ Covered:
 - §6.1: the comma-separated request header, preserving other extensions, no duplicate URI.
 - §6.2: activation requires both the server's declaration and the request header.
 - §6.4: the response echo.
-- §7: the unsigned `cob.payment.status` annotation is not an envelope.
+- §7: the six `cob.payment.status` values; absent, unknown, non-string and local-only `draft`
+  annotations are ignored; a receipt annotated `requested`, `authorized`, `failed` or `expired`
+  contradicts it, while `submitted` and `settled` do not; a payment request imposes no constraint.
+  One further vector keeps the annotation from standing in for an envelope.
 
 Not covered yet, and deliberately so:
 
@@ -120,8 +131,6 @@ Not covered yet, and deliberately so:
 - **`attachCobEnvelope`.** It is the producer-side counterpart of §5 and has no rule of its own; it is
   tested in `packages/core/test/a2a.test.js` instead.
 - **Activation outside an HTTP request.** §10.2 is an open question, not a rule.
-- **The payment substate's allowed values and non-contradiction rule** (§7), beyond the single
-  "annotation is not an envelope" vector.
 
 ### `cob1/v1.json`
 

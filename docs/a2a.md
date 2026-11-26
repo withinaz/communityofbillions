@@ -687,3 +687,28 @@ still blocked; the accepted `read-envelope` vector; #24 (Agent Card), #25 (x402)
 
 **Next:** attach the §6 helpers and this substate check to the first transport (#3), or add vectors
 for §7's annotation rules. A reproducible bug still wins.
+
+### 2026-11-26 — §7's annotation rule becomes a conformance vector
+
+**Read:** `spec/COB-A2A.md` §7, `spec/test-vectors/a2a/v1.json`, and the two substate helpers in
+`packages/core/src/a2a.js`. No external specification was read this pass, so nothing below is a new
+claim about A2A.
+
+**Changed:** 21 hand-written vectors add §7 to the conformance suite: the six wire states; the
+values that must be ignored (absent, unknown, non-string, local-only `draft`, missing metadata); and
+the non-contradiction rule (a receipt annotated `requested`, `authorized`, `failed` or `expired`
+contradicts it; `submitted` and `settled` do not; a request is unconstrained). The runner gains
+`read-payment-status` and `check-payment-status`; it compares a boolean contradiction, not the
+implementation's problem code. `spec/COB-A2A.md` §7 now names the four and the two instead of giving
+`requested` as the only example, and the status line says §4–§7. No wire change.
+
+**The uncomfortable part:** the spec's status line and its 2026-11-12 change-log row claimed §7 was
+pinned by vectors when the suite had only one vector showing an annotation is not an envelope. The
+README was honest about the gap; the spec was not. Writing the vectors also exposed that the
+normative text named one contradictory state while the adapter rejected four. Both were defensible
+readings; only one was written down. The pass wrote the four down, so the next disagreement can be
+about the rule rather than about what the rule says.
+
+**Not done:** the annotation is still unsigned and display-only; the envelope in the check vectors is
+only a `{ "type": … }` carrier, not a verified envelope; the accepted `read-envelope` vector still
+needs a signed fixture; #3 (transport) and #30 remain blocked; #24, #25 and #20 are untouched.

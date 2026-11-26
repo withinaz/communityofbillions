@@ -5,9 +5,11 @@ import { describe, it } from 'node:test';
 import {
   ValidationError,
   assertCobExtensionEchoed,
+  checkCobPaymentStatus,
   isCobExtensionActive,
   parseA2AExtensions,
   readCobEnvelope,
+  readCobPaymentStatus,
   validateCobExtension,
   withCobActivation,
 } from '../src/index.js';
@@ -23,9 +25,11 @@ const suite = JSON.parse(readFileSync(SUITE_PATH, 'utf8'));
  */
 const OPERATIONS = Object.freeze([
   'assert-echo',
+  'check-payment-status',
   'is-active',
   'parse-extensions',
   'read-envelope',
+  'read-payment-status',
   'validate-declaration',
   'with-activation',
 ]);
@@ -70,6 +74,10 @@ function call(operation, input) {
       return validateCobExtension(input.extension);
     case 'read-envelope':
       return readCobEnvelope(input.message, input.options);
+    case 'read-payment-status':
+      return readCobPaymentStatus(input.message);
+    case 'check-payment-status':
+      return checkCobPaymentStatus(input.message, input.envelope);
     default:
       throw new Error(`vector names an unknown operation: ${operation}`);
   }
@@ -127,6 +135,15 @@ function check(vector) {
     case 'decided':
       assert.equal(result, expected.active);
       return;
+    case 'status':
+      assert.equal(result, expected.status);
+      return;
+    case 'checked': {
+      const checked = /** @type {{ status: string | null, problem: unknown }} */ (result);
+      assert.equal(checked.status, expected.status);
+      assert.equal(checked.problem !== null, expected.contradiction);
+      return;
+    }
     default:
       assert.fail(`${vector.name}: unknown expected outcome ${String(expected.outcome)}`);
   }
