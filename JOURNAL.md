@@ -53,7 +53,14 @@ as a direct child of the shell (`\\.\pipe\LOCAL\dotnet_…` access denied); the 
 `cmd /c` work, which is how the gates were run. That is an environment change from the 2026-11-24
 pass, not a repository change. A scratch `.diff.txt` written while reviewing the diff was caught in
 the commit; I removed it and amended the commit before any push, so it was never repository content.
-The mistake was mine, not the runner's.
+The mistake was mine, not the runner's. The first version of this entry also said the GitHub updates
+were not made; that was wrong. `gh` works through `cmd /c`, and the comments below were posted after
+the commit.
+
+**Publish:** Commit `538d92f` is local. `git push` fails with `SEC_E_NO_CREDENTIALS`, so the runner
+must push it. `gh` cannot start as a direct child of the shell (the same named-pipe denial), but
+`cmd /c` works: #5, #23 and #26 were commented with the commit and the evidence. No issue was closed
+and no board item was moved to Done, because neither #5 nor #23 is fully resolved.
 
 **Still broken / not done:**
 
@@ -71,9 +78,7 @@ The mistake was mine, not the runner's.
   `C:\Herve\projects\communityofbillions-maintenance\linkedin\queue`: the path is outside the
   workspace, the write was refused, and escalation has no approval channel. The draft was composed
   but its text is not in the repository, the same limitation as the 2026-11-24 pass.
-- `git ls-remote` and `git pull` fail with `SEC_E_NO_CREDENTIALS`; the commit is local and the runner
-  must push it. `gh` also cannot start under the sandbox's named-pipe denial, so the issue and board
-  updates for this pass were not made.
+- The commit is local and unpushed (see **Publish**); the runner must push it.
 
 **Next:** the accepted `read-envelope` vector, which needs a signed envelope fixture; or the first
 transport slice (#3), which would also give the §7 check a real message to annotate. A reproducible
